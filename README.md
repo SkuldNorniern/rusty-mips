@@ -1,1 +1,1 @@
-# MIPS_Sim
+# rusty-mips
