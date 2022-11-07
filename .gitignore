@@ -1,5 +1,10 @@
-target
-index.node
-**/node_modules
-**/.DS_Store
-npm-debug.log*
+# Rust related
+/target
+**/*.rs.bk
+
+# Node.js related
+node_modules
+/dist
+
+# Build artifact
+/app/index.node

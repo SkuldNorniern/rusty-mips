@@ -4,16 +4,28 @@
   "description": "",
   "main": "index.node",
   "scripts": {
-    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npm run build --",
-    "build-release": "npm run build -- --release",
-    "install": "npm run build-release",
+    "start": "npm run build && electron app/main.js",
+    "serve": "npm run build-release && electron app/main.js",
+    "pack": "npm run build-release && electron-builder --dir",
+    "dist": "npm run build-release && electron-builder",
+    "build-cmd": "cargo-cp-artifact -nc app/index.node -- cargo build --message-format=json-render-diagnostics",
+	"build": "npm run build-cmd --",
+	"build-release": "npm run build-cmd -- --release",
+    "install": "npm run build",
     "test": "cargo test"
+  },
+  "build": {
+    "appId": "com.example.rusty-mips",
+    "win": {
+      "target": ["portable"]
+    }
   },
   "author": "",
   "license": "",
   "devDependencies": {
-    "cargo-cp-artifact": "^0.1"
+    "cargo-cp-artifact": "^0.1",
+    "electron": "^19.1.4",
+	"electron-builder": "^23.6.0"
   },
   "keywords": []
 }

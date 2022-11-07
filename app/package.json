@@ -1,0 +1,11 @@
+{
+  "name": "rusty-mips",
+  "version": "0.1.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+  },
+  "author": "",
+  "license": "",
+  "keywords": []
+}
