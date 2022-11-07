@@ -2,22 +2,24 @@
   "name": "rusty-mips",
   "version": "0.1.0",
   "description": "",
-  "main": "index.node",
   "scripts": {
     "start": "npm run build && electron app/main.js",
     "serve": "npm run build-release && electron app/main.js",
     "pack": "npm run build-release && electron-builder --dir",
     "dist": "npm run build-release && electron-builder",
     "build-cmd": "cargo-cp-artifact -nc app/index.node -- cargo build --message-format=json-render-diagnostics",
-	"build": "npm run build-cmd --",
-	"build-release": "npm run build-cmd -- --release",
+    "build": "npm run build-cmd --",
+    "build-release": "npm run build-cmd -- --release",
     "install": "npm run build",
-    "test": "cargo test"
+    "test": "cargo test",
+	"clean": "cargo clean && shx --silent rm -r app/index.node dist"
   },
   "build": {
     "appId": "com.example.rusty-mips",
     "win": {
-      "target": ["portable"]
+      "target": [
+        "portable"
+      ]
     }
   },
   "author": "",
@@ -25,7 +27,8 @@
   "devDependencies": {
     "cargo-cp-artifact": "^0.1",
     "electron": "^19.1.4",
-	"electron-builder": "^23.6.0"
+    "electron-builder": "^23.6.0",
+    "shx": "^0.3.4"
   },
   "keywords": []
 }
