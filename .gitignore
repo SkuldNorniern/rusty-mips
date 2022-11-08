@@ -1,10 +1,15 @@
 # Rust related
-/target
+/native/target
 **/*.rs.bk
 
-# Node.js related
-node_modules
+# Electron related
+**/node_modules
 /dist
+/build
 
 # Build artifact
-/app/index.node
+/public/index.node
+
+# IDE
+.idea
+.vs

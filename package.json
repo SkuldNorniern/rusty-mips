@@ -2,20 +2,30 @@
   "name": "rusty-mips",
   "version": "0.1.0",
   "description": "",
+  "main": "build/main.js",
+  "homepage": "./",
   "scripts": {
-    "start": "npm run build && electron app/main.js",
-    "serve": "npm run build-release && electron app/main.js",
-    "pack": "npm run build-release && electron-builder --dir",
-    "dist": "npm run build-release && electron-builder",
-    "build-cmd": "cargo-cp-artifact -nc app/index.node -- cargo build --message-format=json-render-diagnostics",
-    "build": "npm run build-cmd --",
-    "build-release": "npm run build-cmd -- --release",
-    "install": "npm run build",
-    "test": "cargo test",
-	"clean": "cargo clean && shx --silent rm -r app/index.node dist"
+    "native-build": "npm run -C native build",
+    "native-build-release": "npm run -C native build-release",
+    "react-start": "cross-env BROWSER=none react-scripts start",
+    "react-build": "react-scripts build",
+    "electron-start": "wait-on http://127.0.0.1:3000 && cross-env DEV_SERVER=http://localhost:3000/ electron public/main.js",
+    "electron-build": "electron-builder --dir",
+    "electron-dist": "electron-builder",
+    "lint": "eslint src",
+    "clean": "npm run -C native clean & shx --silent rm -r build dist public/index.node",
+    "test": "npm run -C native test",
+    "start": "npm run native-build && concurrently -k npm:react-start npm:electron-start",
+    "build": "npm run native-build-release && npm run react-build && npm run electron-build",
+    "dist": "npm run native-build-release && npm run react-build && npm run electron-dist"
   },
   "build": {
     "appId": "com.example.rusty-mips",
+    "extends": null,
+    "files": [
+      "build/**/*",
+      "package.json"
+    ],
     "win": {
       "target": [
         "portable"
@@ -25,10 +35,46 @@
   "author": "",
   "license": "",
   "devDependencies": {
+    "@types/node": "^16.18.3",
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.8",
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
     "cargo-cp-artifact": "^0.1",
+    "concurrently": "^7.5.0",
+    "cross-env": "^7.0.3",
     "electron": "^19.1.4",
     "electron-builder": "^23.6.0",
-    "shx": "^0.3.4"
+    "eslint": "^8.27.0",
+    "eslint-config-semistandard": "^17.0.0",
+    "eslint-config-standard-with-typescript": "^23.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.5.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-react": "^7.31.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "shx": "^0.3.4",
+    "typescript": "^4.8.4",
+    "wait-on": "^6.0.1",
+    "web-vitals": "^2.1.4"
   },
-  "keywords": []
+  "keywords": [],
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
 }

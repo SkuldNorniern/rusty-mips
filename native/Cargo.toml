@@ -1,5 +1,5 @@
 [package]
-name = "rusty-mips"
+name = "rusty-mips-native"
 version = "0.1.0"
 description = "Tutorial: How to use Rust inside your Electron application with Neon Bindings. https://medium.com/@cazetto.andre/how-to-use-rust-inside-your-electron-application-using-neon-bindings-64bd83fec316"
 authors = ["André Pesci Cazetto"]

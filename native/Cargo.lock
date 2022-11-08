@@ -67,7 +67,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rusty-mips"
+name = "rusty-mips-native"
 version = "0.1.0"
 dependencies = [
  "neon",

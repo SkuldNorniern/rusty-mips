@@ -1,8 +1,8 @@
 # rusty-mips
 
-## Third-party dependency
+A MIPS simulator written in Rust.
 
-Here are some major dependency:
+## Third-party dependency
 
 This project was bootstrapped by [create-neon](https://www.npmjs.com/package/create-neon).
 It implies using Rust for making native Node.js plugin.
@@ -15,33 +15,25 @@ In the project directory, you can run:
 
 ### `npm install`
 
-Installs the project, including running `npm run build`.
+Installs the project.
 
 ### `npm start`
 
 Starts the Electron app in debug mode.
-This automatically runs `npm run build-debug`.
+This builds the Rust module in debug mode, and React also uses debug mode.
 
 ### `npm run serve`
 
 Starts the Electron app in release mode.
-This automatically runs `npm run build-release`.
-
-### `npm run build`
-
-An alias for `npm run build-debug`, which builds the Rust component in debug mode.
-
-### `npm run build-release`
-
-Builds the Rust component in release mode.
+This builds the Rust module in release mode, while React uses debug mode.
 
 ### `npm run dist`
 
 Packages the Electron app for current platform.
-Due to complicated nature of building a native Rust library,
+Due to complicated nature of building a native library,
 it is only possible to build for current platform only.
 
 It *could* be possible to workaround above limitation by using Docker.
 
-This runs `npm run build-release`.
+This builds the Rust module in release mode.
 
