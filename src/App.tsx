@@ -2,6 +2,7 @@ import React from 'react';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 import DisassemblyPage from './pages/DisassemblyPage';
+import AssemblyPage from './pages/AssemblyPage';
 
 enum TabName {
   assembly,
@@ -10,13 +11,16 @@ enum TabName {
 
 const App = (): JSX.Element => {
   return (
-    <Tabs>
-      <Tab eventKey={TabName.assembly} title="Assembly">
-      </Tab>
-      <Tab eventKey={TabName.disassembly} title="Disassembly">
-        <DisassemblyPage />
-      </Tab>
-    </Tabs>
+    <div className="fullscreen-tab-root">
+      <Tabs>
+        <Tab eventKey={TabName.assembly} title="Assembly">
+          <AssemblyPage/>
+        </Tab>
+        <Tab eventKey={TabName.disassembly} title="Disassembly">
+          <DisassemblyPage />
+        </Tab>
+      </Tabs>
+    </div>
   );
 };
 
