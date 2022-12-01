@@ -15,7 +15,9 @@ In the project directory, you can run:
 
 ### `npm install`
 
-Installs the project.
+Installs the project depdendencies.
+Run this before anything else.
+You need to re-run this only if dependency changes.
 
 ### `npm start`
 
