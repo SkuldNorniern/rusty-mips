@@ -3,21 +3,26 @@ import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 import DisassemblyPage from './pages/DisassemblyPage';
 import AssemblyPage from './pages/AssemblyPage';
+import PipelinePage from './pages/PipelinePage';
 
 enum TabName {
   assembly,
   disassembly,
+  pipeline,
 }
 
 const App = (): JSX.Element => {
   return (
     <div className="fullscreen-tab-root">
       <Tabs>
-        <Tab eventKey={TabName.assembly} title="Assembly">
+        <Tab eventKey={TabName.assembly} title="어셈블리">
           <AssemblyPage/>
         </Tab>
-        <Tab eventKey={TabName.disassembly} title="Disassembly">
+        <Tab eventKey={TabName.disassembly} title="디스어셈블리">
           <DisassemblyPage />
+        </Tab>
+        <Tab eventKey={TabName.pipeline} title="파이프라인">
+          <PipelinePage />
         </Tab>
       </Tabs>
     </div>

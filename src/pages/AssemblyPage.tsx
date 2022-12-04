@@ -32,9 +32,9 @@ const AssemblyPage = (): JSX.Element => {
     <Root>
       <CodeArea className="code" defaultValue={defaultValue.trim()} />
       <ButtonArea>
-        <Button variant="primary">Assemble!</Button>{' '}
-        <Button variant="secondary">Clear</Button>{' '}
-        <Button variant="danger">Reset simulator</Button>
+        <Button variant="primary">어셈블!</Button>{' '}
+        <Button variant="secondary">지우기</Button>{' '}
+        <Button variant="danger">시뮬레이터 리셋</Button>
       </ButtonArea>
     </Root>
   );
