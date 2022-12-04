@@ -28,12 +28,20 @@ main:
 `;
 
 const AssemblyPage = (): JSX.Element => {
+  const codeRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const onClickErase = (): void => {
+    if (codeRef.current != null) {
+      codeRef.current.value = '';
+    }
+  };
+
   return (
     <Root>
-      <CodeArea className="code" defaultValue={defaultValue.trim()} />
+      <CodeArea ref={codeRef} className="code" defaultValue={defaultValue.trim()} />
       <ButtonArea>
         <Button variant="primary">어셈블!</Button>{' '}
-        <Button variant="secondary">지우기</Button>{' '}
+        <Button variant="secondary" onClick={onClickErase}>지우기</Button>{' '}
         <Button variant="danger">시뮬레이터 리셋</Button>
       </ButtonArea>
     </Root>
