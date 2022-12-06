@@ -1,3 +1,5 @@
+mod assembler;
+
 use neon::prelude::*;
 
 fn hello(mut cx: FunctionContext) -> JsResult<JsString> {
