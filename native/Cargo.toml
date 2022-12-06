@@ -1,9 +1,9 @@
 [package]
 name = "rusty-mips-native"
 version = "0.1.0"
-description = "Tutorial: How to use Rust inside your Electron application with Neon Bindings. https://medium.com/@cazetto.andre/how-to-use-rust-inside-your-electron-application-using-neon-bindings-64bd83fec316"
-authors = ["André Pesci Cazetto"]
-license = "MIT"
+description = "Native module of rusty-mips, a simple mips simulator"
+authors = ["jsonmona", "SkuldNorniern"]
+license = ""
 edition = "2018"
 exclude = ["index.node"]
 

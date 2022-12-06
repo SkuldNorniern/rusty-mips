@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.node",
   "scripts": {
-    "build-cmd": "cargo-cp-artifact -nc ../public/index.node -- cargo build --message-format=json-render-diagnostics",
+    "build-cmd": "cargo-cp-artifact -nc ../public/index.node -- cargo build --lib --message-format=json-render-diagnostics",
     "build": "npm run build-cmd --",
     "build-release": "npm run build-cmd -- --release",
     "install": "npm run build",
