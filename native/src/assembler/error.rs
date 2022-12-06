@@ -27,6 +27,12 @@ pub enum AssemblerError {
     #[error("invalid number of operands in line `{0}`")]
     InvalidNumberOfOperands(String),
 
-    #[error("line too long")]
-    LineTooLong,
+    #[error("segment address overlaps")]
+    SegmentOverlap,
+
+    #[error("offset {0} is too large to encode")]
+    OffsetTooLarge(i64),
+
+    #[error("jump target 0x{target:08x} is too far to encode from pc=0x{pc:08x}")]
+    JumpTooFar { target: u32, pc: u32 },
 }

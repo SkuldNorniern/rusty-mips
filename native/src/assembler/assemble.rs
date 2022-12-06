@@ -1,22 +1,38 @@
 use super::error::AssemblerError;
-use super::instruction::Instruction;
+use super::instruction::{FormatI, FormatR, Instruction, Register};
 use super::segment::Segment;
-use crate::assembler::instruction::{FormatR, Register};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
+use lazy_static::lazy_static;
+use regex::Regex;
 
-fn try_parse_number(text: &str) -> Option<u32> {
+fn try_parse_unsigned(text: &str) -> Option<u64> {
     let text = text.to_ascii_lowercase();
 
     if let Some(x) = text.strip_prefix("0x") {
-        u32::from_str_radix(x, 16).ok()
+        u64::from_str_radix(x, 16).ok()
     } else if let Some(x) = text.strip_prefix("0o") {
-        u32::from_str_radix(x, 8).ok()
+        u64::from_str_radix(x, 8).ok()
     } else if let Some(x) = text.strip_prefix("0b") {
-        u32::from_str_radix(x, 2).ok()
+        u64::from_str_radix(x, 2).ok()
     } else {
-        u32::from_str(&text).ok()
+        u64::from_str(&text).ok()
+    }
+}
+
+fn try_parse_signed(text: &str) -> Option<i64> {
+    let text = text.to_ascii_lowercase();
+
+    if let Some(x) = text.strip_prefix("0x") {
+        i64::from_str_radix(x, 16).ok()
+    } else if let Some(x) = text.strip_prefix("0o") {
+        i64::from_str_radix(x, 8).ok()
+    } else if let Some(x) = text.strip_prefix("0b") {
+        i64::from_str_radix(x, 2).ok()
+    } else {
+        i64::from_str(&text).ok()
     }
 }
 
@@ -76,10 +92,9 @@ fn bail_trailing_token<'a>(mut iter: impl Iterator<Item = &'a str>) -> Result<()
     }
 }
 
-fn try_parse_3arg<'a>(
-    line: &'a str,
-    mut args: impl Iterator<Item = &'a str>,
-) -> Result<FormatR, AssemblerError> {
+fn try_parse_ins_3arg(args: &str, line: &str) -> Result<FormatR, AssemblerError> {
+    let mut args = args.split(',');
+
     let rd = args
         .next()
         .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))?;
@@ -99,26 +114,60 @@ fn try_parse_3arg<'a>(
     })
 }
 
-fn try_parse_ins<'a>(line: &'a str, mnemonic: &'a str) -> Result<Instruction, AssemblerError> {
+fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerError> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"(\$.+)\s*,\s*([^ ]+?)\((\$.+)\)").unwrap();
+    }
+
+    let caps = match RE.captures(args) {
+        Some(x) => x,
+        None => return Err(AssemblerError::InvalidNumberOfOperands(line.into()))
+    };
+
+    let imm = try_parse_signed(&caps[2]).ok_or_else(|| AssemblerError::InvalidToken(caps[2].into()))?;
+    let rs = try_parse_reg(&caps[3])?;
+    let rt = try_parse_reg(&caps[1])?;
+
+    if TryInto::<i16>::try_into(imm).is_err() {
+        return Err(AssemblerError::OffsetTooLarge(imm));
+    }
+
+    Ok(FormatI {
+        rs: Register(rs),
+        rt: Register(rt),
+        imm: imm as u16,
+    })
+}
+
+fn try_parse_ins<'a>(
+    line: &'a str,
+    mnemonic: &'a str,
+    labels: &Option<HashMap<String, u32>>,
+) -> Result<Instruction, AssemblerError> {
     let args = line
+        .trim()
         .strip_prefix(mnemonic)
         .expect("line should start with mnemonic");
-    let args = args.split(',');
 
     Ok(match mnemonic {
-        "and" => Instruction::And(try_parse_3arg(line, args)?),
-        "or" => Instruction::Or(try_parse_3arg(line, args)?),
-        "add" => Instruction::Add(try_parse_3arg(line, args)?),
-        "sub" => Instruction::Sub(try_parse_3arg(line, args)?),
-        "slt" => Instruction::Slt(try_parse_3arg(line, args)?),
+        "and" => Instruction::And(try_parse_ins_3arg(args, line)?),
+        "or" => Instruction::Or(try_parse_ins_3arg(args, line)?),
+        "add" => Instruction::Add(try_parse_ins_3arg(args, line)?),
+        "sub" => Instruction::Sub(try_parse_ins_3arg(args, line)?),
+        "slt" => Instruction::Slt(try_parse_ins_3arg(args, line)?),
+        "lw" => Instruction::Lw(try_parse_ins_memory(args, line)?),
+        "sw" => Instruction::Sw(try_parse_ins_memory(args, line)?),
         _ => return Err(AssemblerError::UnknownInstruction(mnemonic.into())),
     })
 }
 
-#[allow(dead_code)]
-pub fn assemble(asm: &str) -> Result<Vec<Segment>, AssemblerError> {
+fn range_overlaps(a: RangeInclusive<u32>, b: RangeInclusive<u32>) -> bool {
+    !a.is_empty() && !b.is_empty() && a.start() <= b.end() && b.start() <= a.end()
+}
+
+fn parse(asm: &str, labels: &Option<HashMap<String, u32>>) -> Result<Vec<Segment>, AssemblerError> {
     let mut segs = vec![];
-    let mut curr_seg = None;
+    let mut curr_seg: Option<Segment> = None;
     let mut global_labels = HashSet::new();
     let mut is_text_seg = false;
 
@@ -137,8 +186,6 @@ pub fn assemble(asm: &str) -> Result<Vec<Segment>, AssemblerError> {
 
         if line.is_empty() {
             continue;
-        } else if line.len() > 8192 {
-            return Err(AssemblerError::LineTooLong);
         }
 
         let mut tokens = line.split_whitespace();
@@ -148,11 +195,17 @@ pub fn assemble(asm: &str) -> Result<Vec<Segment>, AssemblerError> {
 
         if first_token == ".text" || first_token == ".data" {
             if let Some(x) = curr_seg {
+                if is_text_seg {
+                    next_text_addr = x.base_addr + x.data.len() as u32;
+                } else {
+                    next_data_addr = x.base_addr + x.data.len() as u32;
+                }
+
                 segs.push(x);
             }
 
-            let base_addr = match tokens.next().and_then(try_parse_number) {
-                Some(x) => x,
+            let base_addr = match tokens.next().and_then(try_parse_unsigned) {
+                Some(x) => x as u32,
                 None => {
                     if first_token == ".text" {
                         next_text_addr
@@ -199,31 +252,19 @@ pub fn assemble(asm: &str) -> Result<Vec<Segment>, AssemblerError> {
                 .expect("line should start with first token")
                 .split(',')
                 .map(|x| {
-                    try_parse_number(x.trim()).ok_or_else(|| AssemblerError::InvalidToken(x.into()))
+                    try_parse_signed(x.trim()).ok_or_else(|| AssemblerError::InvalidToken(x.into()))
                 });
 
             for num in values {
-                seg.data.extend_from_slice(&num?.to_ne_bytes());
-            }
-
-            if is_text_seg {
-                next_text_addr = u32::max(next_text_addr, seg.base_addr + seg.data.len() as u32);
-            } else {
-                next_data_addr = u32::max(next_data_addr, seg.base_addr + seg.data.len() as u32);
+                seg.data.extend_from_slice(&(num? as u32).to_ne_bytes());
             }
         } else {
-            let ins = try_parse_ins(line, first_token)?;
+            let ins = try_parse_ins(line, first_token, labels)?;
             let seg = curr_seg
                 .as_mut()
                 .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
 
             seg.data.extend_from_slice(&ins.encode().to_ne_bytes());
-
-            if is_text_seg {
-                next_text_addr = u32::max(next_text_addr, seg.base_addr + seg.data.len() as u32);
-            } else {
-                next_data_addr = u32::max(next_data_addr, seg.base_addr + seg.data.len() as u32);
-            }
         }
     }
 
@@ -232,6 +273,39 @@ pub fn assemble(asm: &str) -> Result<Vec<Segment>, AssemblerError> {
     }
 
     Ok(segs)
+}
+
+#[allow(unused)]
+pub fn assemble(asm: &str) -> Result<Vec<Segment>, AssemblerError> {
+    // assemble
+    let segments = parse(asm, &None)?;
+
+    // collect labels
+    let mut labels = HashMap::new();
+    for seg in &segments {
+        for (k, v) in &seg.labels {
+            labels.insert(k.clone(), seg.base_addr + v);
+        }
+    }
+
+    // reassemble with label
+    drop(segments);
+    let segments = parse(asm, &Some(labels))?;
+
+    // check overlap
+    for a in &segments {
+        for b in &segments {
+            if std::ptr::eq(a, b) {
+                continue;
+            }
+
+            if range_overlaps(a.address_range(), b.address_range()) {
+                return Err(AssemblerError::SegmentOverlap);
+            }
+        }
+    }
+
+    Ok(segments)
 }
 
 #[cfg(test)]
@@ -280,5 +354,32 @@ mod test {
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x123);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0o123);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0xffffffff);
+    }
+
+    #[test]
+    fn assemble_memory() {
+        let code = ".text\nlw $3, 1234($5)\nsw $s1, -12($gp)\nlw $7, 0x7fff($4)";
+        let segs = assemble(code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].data.len(), 12);
+        assert!(segs[0].labels.is_empty());
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x8ca304d2);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0xaf91fff4);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x8c877fff);
+    }
+
+    #[test]
+    fn assemble_memory_fail() {
+        let code = ".text\nlw $7, 0x8000($4)";
+        let result = assemble(code);
+        assert!(result.is_err());
+        if let AssemblerError::OffsetTooLarge(_) = result.unwrap_err() {
+            // ok
+        } else {
+            panic!("expected OffsetTooLarge error");
+        }
     }
 }

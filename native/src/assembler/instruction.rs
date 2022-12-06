@@ -21,15 +21,15 @@ impl FormatR {
 
 #[derive(Copy, Clone)]
 pub struct FormatI {
-    rs: Register,
-    rt: Register,
-    imm: u16,
+    pub rs: Register,
+    pub rt: Register,
+    pub imm: u16,
 }
 
 impl FormatI {
     fn encode(&self, opcode: u8) -> u32 {
         (opcode as u32) << 26
-            | (self.rs.0 as u32) << 16
+            | (self.rs.0 as u32) << 21
             | (self.rt.0 as u32) << 16
             | (self.imm as u32)
     }
@@ -37,7 +37,7 @@ impl FormatI {
 
 #[derive(Copy, Clone)]
 pub struct FormatJ {
-    addr: u32,
+    pub addr: u32,
 }
 
 impl FormatJ {
