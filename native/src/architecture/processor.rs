@@ -1,3 +1,5 @@
+use super::pipes;
+use super::stage;
 use byteorder::{ByteOrder, NativeEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
 
@@ -17,11 +19,13 @@ pub struct Processor {
     ex_mem: pipes::ExPipe,
     mem_wb: pipes::MemPipe,
     is_hazard: bool,
-    cur_line: i32,
+    cur_addr: u32,
+    cur_line: u32,
 }
 impl Processor {
     pub fn new() -> Processor {
-        let mut proc = Processor {
+        
+        Processor {
             pc: 0x00400000,
             hi: 0x0,
             lo: 0x0,
@@ -33,9 +37,9 @@ impl Processor {
             ex_mem: { pipes::ExPipe::default() },
             mem_wb: { pipes::MemPipe::default() },
             is_hazard: false,
+            cur_addr: 0x00000000,
             cur_line: 0,
-        };
-        proc
+        }
     }
 
     pub fn add_instruction(&mut self, instruction: Block) {
@@ -43,17 +47,18 @@ impl Processor {
     }
 
     pub fn next(&mut self) {
-        self.pc = self.pc + 4;
-        //if self.if_id.is_empty()  == false {
-        //    self.id_ex = stage::if_id_stage(&mut self.if_id);
+        self.cur_addr = self.pc;
+        self.pc += 4;
 
-        //}
-        if self.is_hazard == false {
-            self.if_id.npc = self.pc;
-            let mut rdrins = Cursor::new(self.instructions[self.cur_line as usize].data.clone());
-            self.if_id.inst = rdrins.read_u32::<NativeEndian>().unwrap();
-            self.cur_line = self.cur_line + 1;
+        self.id_ex = stage::id_stage::id_next(&mut self.if_id, self.is_hazard, self.cur_addr);
+        let mut rdr_inst = Cursor::new(self.instructions[self.cur_line as usize].data.clone());
+        let cur_inst = rdr_inst.read_u32::<NativeEndian>().unwrap();
+        self.if_id = stage::if_stage::if_next(self.pc, cur_inst, self.is_hazard, self.cur_addr);
+
+        if self.if_id.ran == self.cur_addr {
+            self.cur_line += 1;
         }
+
         self.is_hazard = false;
     }
 }
@@ -93,5 +98,24 @@ mod tests {
         assert_eq!(proc.if_id.inst, 0x00000000);
         proc.next();
         assert_eq!(proc.if_id.inst, 0x00400000);
+    }
+    #[test]
+    fn stage_id_control_unit() {
+        let mut proc = Processor::new();
+        let mut wtr = vec![];
+        wtr.write_u32::<NativeEndian>(0x02114020).unwrap();
+        proc.add_instruction(Block { data: wtr });
+        proc.next();
+        let test: u32 = 0x02114020;
+        let sample = stage::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
+
+        assert_eq!(proc.id_ex.ctr_unit.reg_dst, sample.reg_dst);
+        assert_eq!(proc.id_ex.ctr_unit.branch, sample.branch);
+        assert_eq!(proc.id_ex.ctr_unit.mem_read, sample.mem_read);
+        assert_eq!(proc.id_ex.ctr_unit.mem_to_reg, sample.mem_to_reg);
+        assert_eq!(proc.id_ex.ctr_unit.alu_op, sample.alu_op);
+        assert_eq!(proc.id_ex.ctr_unit.mem_write, sample.mem_write);
+        assert_eq!(proc.id_ex.ctr_unit.alu_src, sample.alu_src);
+        assert_eq!(proc.id_ex.ctr_unit.reg_write, sample.reg_write);
     }
 }

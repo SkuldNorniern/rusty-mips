@@ -1,14 +1,10 @@
-pub mod ex_mem;
-pub mod id_ex;
-pub mod if_id;
-pub mod mem_wb;
+pub mod control_unit;
+pub mod ex_stage;
+pub mod id_stage;
+pub mod if_stage;
+pub mod mem_stage;
+pub mod wb_stage;
 
-use crate::architecture::pipes;
-
-pub fn if_id_stage(_if_id: &mut pipes::IfPipe) -> pipes::IdPipe {
-    
-    if_id::next(_if_id)
-}
 pub fn id_ex_stage() {
     //id_ex::next();
 }
