@@ -1,8 +1,8 @@
+pub mod stage;
 pub mod pipes;
 
 use byteorder::{ByteOrder, NativeEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
-use crate::stage;
 
 pub struct Block {
     //labels: Map<String, u32>,
@@ -15,10 +15,10 @@ pub struct Processor {
     instructions: Vec<Block>,
     memory: [u32; 65536],
     registers: [u32; 32],
-    if_id: pipes::if_pipe,
-    id_ex: pipes::id_pipe,
-    ex_mem: pipes::ex_pipe,
-    mem_wb: pipes::mem_pipe,
+    if_id: pipes::IfPipe,
+    id_ex: pipes::IdPipe,
+    ex_mem: pipes::ExPipe,
+    mem_wb: pipes::MemPipe,
     is_hazard: bool,
     cur_line: i32,
 }
@@ -31,10 +31,10 @@ impl Processor {
             instructions: Vec::new(),
             memory: [0; 65536],
             registers: [0; 32],
-            if_id: {pipes::if_pipe::default()},
-            id_ex: {pipes::id_pipe::default()},
-            ex_mem:{pipes::ex_pipe::default()},
-            mem_wb:{pipes::mem_pipe::default()},
+            if_id: {pipes::IfPipe::default()},
+            id_ex: {pipes::IdPipe::default()},
+            ex_mem:{pipes::ExPipe::default()},
+            mem_wb:{pipes::MemPipe::default()},
             is_hazard: false,
             cur_line: 0,
         };
@@ -89,12 +89,16 @@ mod tests {
     #[test]
     fn processor_cycle_2_inst() {
         let mut proc = Processor::new();
+        let mut wtr = vec![];
+        wtr.write_u32::<NativeEndian>(0x00000000).unwrap();
         proc.add_instruction(Block {
-            data: vec![0x00, 0x00, 0x00, 0x00],
+            data: wtr,
         });
         proc.next();
+        let mut wtr2 = vec![];
+        wtr2.write_u32::<NativeEndian>(0x00400000).unwrap();
         proc.add_instruction(Block {
-            data: vec![0x00, 0x00, 0x40, 0x00],
+            data: wtr2,
         });
         assert_eq!(
             proc.if_id.inst,

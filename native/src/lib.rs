@@ -2,7 +2,6 @@ mod architecture;
 mod assembler;
 mod component;
 mod memory;
-mod stage;
 
 use neon::prelude::*;
 
