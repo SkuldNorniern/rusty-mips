@@ -2,6 +2,7 @@ mod arch;
 mod assembler;
 mod component;
 mod stage;
+mod memory;
 
 use neon::prelude::*;
 

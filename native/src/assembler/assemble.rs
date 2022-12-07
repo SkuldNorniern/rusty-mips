@@ -40,7 +40,7 @@ fn try_parse_signed(text: &str) -> Option<i64> {
 
 fn try_parse_reg(name: &str) -> Result<RegisterName, AssemblerError> {
     name.strip_prefix('$')
-        .and_then(|x| RegisterName::try_from_name(x))
+        .and_then(RegisterName::try_from_name)
         .ok_or_else(|| AssemblerError::InvalidRegisterName(name.into()))
 }
 
