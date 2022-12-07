@@ -1,5 +1,5 @@
-pub mod stage;
 pub mod pipes;
+pub mod stage;
 
 use byteorder::{ByteOrder, NativeEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
@@ -31,10 +31,10 @@ impl Processor {
             instructions: Vec::new(),
             memory: [0; 65536],
             registers: [0; 32],
-            if_id: {pipes::IfPipe::default()},
-            id_ex: {pipes::IdPipe::default()},
-            ex_mem:{pipes::ExPipe::default()},
-            mem_wb:{pipes::MemPipe::default()},
+            if_id: { pipes::IfPipe::default() },
+            id_ex: { pipes::IdPipe::default() },
+            ex_mem: { pipes::ExPipe::default() },
+            mem_wb: { pipes::MemPipe::default() },
             is_hazard: false,
             cur_line: 0,
         };
@@ -49,7 +49,7 @@ impl Processor {
         self.pc = self.pc + 4;
         //if self.if_id.is_empty()  == false {
         //    self.id_ex = stage::if_id_stage(&mut self.if_id);
-            
+
         //}
         if self.is_hazard == false {
             self.if_id.npc = self.pc;
@@ -80,34 +80,21 @@ mod tests {
         wtr.write_u32::<NativeEndian>(0x00000000).unwrap();
 
         proc.add_instruction(Block { data: wtr });
-        proc.next();  
-        assert_eq!(
-            proc.if_id.inst,
-            0x00000000
-        );
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x00000000);
     }
     #[test]
     fn processor_cycle_2_inst() {
         let mut proc = Processor::new();
         let mut wtr = vec![];
         wtr.write_u32::<NativeEndian>(0x00000000).unwrap();
-        proc.add_instruction(Block {
-            data: wtr,
-        });
+        proc.add_instruction(Block { data: wtr });
         proc.next();
         let mut wtr2 = vec![];
         wtr2.write_u32::<NativeEndian>(0x00400000).unwrap();
-        proc.add_instruction(Block {
-            data: wtr2,
-        });
-        assert_eq!(
-            proc.if_id.inst,
-            0x00000000
-        );
+        proc.add_instruction(Block { data: wtr2 });
+        assert_eq!(proc.if_id.inst, 0x00000000);
         proc.next();
-        assert_eq!(
-            proc.if_id.inst,
-            0x00400000
-        );
+        assert_eq!(proc.if_id.inst, 0x00400000);
     }
 }
