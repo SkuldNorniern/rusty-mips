@@ -234,7 +234,7 @@ mod test {
     #[test]
     fn read_uncommitted() {
         let test = |endian| {
-            let mut mem = SlowMem::new(endian, &[]);
+            let mem = SlowMem::new(endian, &[]);
             assert_eq!(mem.read_u32(0x12345678), 0);
             assert_eq!(mem.read_u32(0), 0);
             assert_eq!(mem.read_u32(0xfffffff0), 0);

@@ -1,11 +1,11 @@
-use byteorder::{ByteOrder, NativeEndian, ReadBytesExt, WriteBytesExt};
-use std::fmt;
-use std::io::Cursor;
+
+
+
 
 use crate::architecture::pipes;
 
 pub fn next(_id_ex: &mut pipes::IdPipe) -> pipes::ExPipe {
-    let mut ex_mem: pipes::ExPipe = pipes::ExPipe::default();
+    let ex_mem: pipes::ExPipe = pipes::ExPipe::default();
     //let mut branch_target: Vec<u8> = Vec::new();
     //let mut npc: Vec<u8> = Vec::new();
     //println!("if_id: {:?}", if_id);

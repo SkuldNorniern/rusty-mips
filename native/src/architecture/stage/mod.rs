@@ -6,8 +6,8 @@ pub mod mem_wb;
 use crate::architecture::pipes;
 
 pub fn if_id_stage(_if_id: &mut pipes::IfPipe) -> pipes::IdPipe {
-    let id_ex = if_id::next(_if_id);
-    id_ex
+    
+    if_id::next(_if_id)
 }
 pub fn id_ex_stage() {
     //id_ex::next();
