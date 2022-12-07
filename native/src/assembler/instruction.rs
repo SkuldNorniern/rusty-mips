@@ -1,19 +1,29 @@
-#[derive(Copy, Clone)]
-pub struct Register(pub u8);
+use crate::component::RegisterName;
 
 #[derive(Copy, Clone)]
 pub struct FormatR {
-    pub rd: Register,
-    pub rs: Register,
-    pub rt: Register,
-    pub shamt: u8,
+    rd: RegisterName,
+    rs: RegisterName,
+    rt: RegisterName,
+    shamt: u8,
 }
 
 impl FormatR {
-    fn encode(&self, funct: u8) -> u32 {
-        (self.rs.0 as u32) << 21
-            | (self.rt.0 as u32) << 16
-            | (self.rd.0 as u32) << 11
+    pub fn new(rd: RegisterName, rs: RegisterName, rt: RegisterName, shamt: u8) -> Self {
+        assert_eq!(shamt & 0b1110_0000, 0, "shamt must be 5 bits");
+
+        FormatR {
+            rd,
+            rs,
+            rt,
+            shamt,
+        }
+    }
+
+    pub fn encode(&self, funct: u8) -> u32 {
+        (self.rs.num() as u32) << 21
+            | (self.rt.num() as u32) << 16
+            | (self.rd.num() as u32) << 11
             | (self.shamt as u32) << 6
             | (funct as u32)
     }
@@ -21,26 +31,43 @@ impl FormatR {
 
 #[derive(Copy, Clone)]
 pub struct FormatI {
-    pub rs: Register,
-    pub rt: Register,
-    pub imm: u16,
+    rs: RegisterName,
+    rt: RegisterName,
+    imm: u16,
 }
 
 impl FormatI {
-    fn encode(&self, opcode: u8) -> u32 {
+    pub fn new(rs: RegisterName, rt: RegisterName, imm: u16) -> Self {
+        FormatI {
+            rs,
+            rt,
+            imm
+        }
+    }
+
+    pub fn encode(&self, opcode: u8) -> u32 {
         (opcode as u32) << 26
-            | (self.rs.0 as u32) << 21
-            | (self.rt.0 as u32) << 16
+            | (self.rs.num() as u32) << 21
+            | (self.rt.num() as u32) << 16
             | (self.imm as u32)
     }
 }
 
 #[derive(Copy, Clone)]
 pub struct FormatJ {
-    pub addr: u32,
+    addr: u32,
 }
 
 impl FormatJ {
+    fn new(addr: u32) -> Self {
+        assert_eq!(addr & 0x0000_0003, 0, "address must be aligned");
+        assert_eq!(addr & 0xf000_0000, 0, "address must have top 4 bits zero");
+
+        FormatJ {
+            addr
+        }
+    }
+
     fn encode(&self, opcode: u8) -> u32 {
         (opcode as u32) << 26 | self.addr
     }

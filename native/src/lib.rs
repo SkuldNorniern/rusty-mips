@@ -1,4 +1,5 @@
 mod assembler;
+mod component;
 
 use neon::prelude::*;
 

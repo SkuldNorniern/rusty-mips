@@ -1,5 +1,5 @@
 use super::error::AssemblerError;
-use super::instruction::{FormatI, FormatR, Instruction, Register};
+use super::instruction::{FormatI, FormatR, Instruction};
 use super::segment::Segment;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
@@ -7,6 +7,7 @@ use std::ops::RangeInclusive;
 use std::str::FromStr;
 use lazy_static::lazy_static;
 use regex::Regex;
+use crate::component::RegisterName;
 
 fn try_parse_unsigned(text: &str) -> Option<u64> {
     let text = text.to_ascii_lowercase();
@@ -36,53 +37,10 @@ fn try_parse_signed(text: &str) -> Option<i64> {
     }
 }
 
-fn try_parse_reg(text: &str) -> Result<u8, AssemblerError> {
-    let stripped = text
-        .strip_prefix('$')
-        .ok_or_else(|| AssemblerError::InvalidRegisterName(text.into()))?;
-
-    // Try parsing as numeric form (e.g. $4)
-    if let Ok(x) = u8::from_str(stripped) {
-        if x < 32 {
-            return Ok(x);
-        }
-    }
-
-    // Try parsing as textual form (e.g. $v1)
-    match stripped {
-        "r0" | "zero" => Ok(0),
-        "at" => Ok(1),
-        "v0" => Ok(2),
-        "a0" => Ok(4),
-        "a1" => Ok(5),
-        "a2" => Ok(6),
-        "a3" => Ok(7),
-        "t0" => Ok(8),
-        "t1" => Ok(9),
-        "t2" => Ok(10),
-        "t3" => Ok(11),
-        "t4" => Ok(12),
-        "t5" => Ok(13),
-        "t6" => Ok(14),
-        "t7" => Ok(15),
-        "s0" => Ok(16),
-        "s1" => Ok(17),
-        "s2" => Ok(18),
-        "s3" => Ok(19),
-        "s4" => Ok(20),
-        "s5" => Ok(21),
-        "s6" => Ok(22),
-        "s7" => Ok(23),
-        "t8" => Ok(24),
-        "t9" => Ok(25),
-        "k0" => Ok(26),
-        "k1" => Ok(27),
-        "gp" => Ok(28),
-        "sp" => Ok(29),
-        "s8" => Ok(30),
-        "ra" => Ok(31),
-        _ => Err(AssemblerError::InvalidRegisterName(text.into())),
-    }
+fn try_parse_reg(name: &str) -> Result<RegisterName, AssemblerError> {
+    name.strip_prefix('$')
+        .and_then(|x| RegisterName::try_from_name(x))
+        .ok_or_else(|| AssemblerError::InvalidRegisterName(name.into()))
 }
 
 fn bail_trailing_token<'a>(mut iter: impl Iterator<Item = &'a str>) -> Result<(), AssemblerError> {
@@ -104,14 +62,15 @@ fn try_parse_ins_3arg(args: &str, line: &str) -> Result<FormatR, AssemblerError>
     let rt = args
         .next()
         .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))?;
+
     bail_trailing_token(args)?;
 
-    Ok(FormatR {
-        rd: Register(try_parse_reg(rd.trim())?),
-        rs: Register(try_parse_reg(rs.trim())?),
-        rt: Register(try_parse_reg(rt.trim())?),
-        shamt: 0,
-    })
+    Ok(FormatR::new(
+        try_parse_reg(rd.trim())?,
+        try_parse_reg(rs.trim())?,
+        try_parse_reg(rt.trim())?,
+        0,
+    ))
 }
 
 fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerError> {
@@ -132,11 +91,7 @@ fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerErro
         return Err(AssemblerError::OffsetTooLarge(imm));
     }
 
-    Ok(FormatI {
-        rs: Register(rs),
-        rt: Register(rt),
-        imm: imm as u16,
-    })
+    Ok(FormatI::new(rs, rt, imm as u16))
 }
 
 fn try_parse_ins<'a>(
