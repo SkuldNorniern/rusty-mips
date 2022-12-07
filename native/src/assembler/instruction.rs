@@ -12,12 +12,7 @@ impl FormatR {
     pub fn new(rd: RegisterName, rs: RegisterName, rt: RegisterName, shamt: u8) -> Self {
         assert_eq!(shamt & 0b1110_0000, 0, "shamt must be 5 bits");
 
-        FormatR {
-            rd,
-            rs,
-            rt,
-            shamt,
-        }
+        FormatR { rd, rs, rt, shamt }
     }
 
     pub fn encode(&self, funct: u8) -> u32 {
@@ -38,11 +33,7 @@ pub struct FormatI {
 
 impl FormatI {
     pub fn new(rs: RegisterName, rt: RegisterName, imm: u16) -> Self {
-        FormatI {
-            rs,
-            rt,
-            imm
-        }
+        FormatI { rs, rt, imm }
     }
 
     pub fn encode(&self, opcode: u8) -> u32 {
@@ -62,9 +53,7 @@ impl FormatJ {
     pub(crate) fn new(target: u32) -> Self {
         assert_eq!(target & 0xfc00_0000, 0, "target must have top 6 bits zero");
 
-        FormatJ {
-            target
-        }
+        FormatJ { target }
     }
 
     fn encode(&self, opcode: u8) -> u32 {

@@ -1,10 +1,10 @@
-pub mod if_id;
-pub mod id_ex;
 pub mod ex_mem;
+pub mod id_ex;
+pub mod if_id;
 pub mod mem_wb;
 
-pub fn if_id_stage(if_id: &mut Vec<u8> ) ->  Vec<u8>{
-    let id_ex  = if_id::next(if_id);
+pub fn if_id_stage(if_id: &mut Vec<u8>) -> Vec<u8> {
+    let id_ex = if_id::next(if_id);
     id_ex
 }
 pub fn id_ex_stage() {

@@ -1,5 +1,7 @@
+mod arch;
 mod assembler;
 mod component;
+mod stage;
 
 use neon::prelude::*;
 

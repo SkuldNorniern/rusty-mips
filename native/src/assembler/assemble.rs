@@ -1,14 +1,14 @@
 use super::error::AssemblerError;
 use super::instruction::{FormatI, FormatR, Instruction};
 use super::segment::Segment;
+use crate::assembler::instruction::FormatJ;
+use crate::component::RegisterName;
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
-use lazy_static::lazy_static;
-use regex::Regex;
-use crate::assembler::instruction::FormatJ;
-use crate::component::RegisterName;
 
 fn try_parse_unsigned(text: &str) -> Option<u64> {
     let text = text.to_ascii_lowercase();
@@ -81,10 +81,11 @@ fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerErro
 
     let caps = match RE.captures(args) {
         Some(x) => x,
-        None => return Err(AssemblerError::InvalidNumberOfOperands(line.into()))
+        None => return Err(AssemblerError::InvalidNumberOfOperands(line.into())),
     };
 
-    let imm = try_parse_signed(&caps[2]).ok_or_else(|| AssemblerError::InvalidToken(caps[2].into()))?;
+    let imm =
+        try_parse_signed(&caps[2]).ok_or_else(|| AssemblerError::InvalidToken(caps[2].into()))?;
     let rs = try_parse_reg(&caps[3])?;
     let rt = try_parse_reg(&caps[1])?;
 
@@ -95,7 +96,12 @@ fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerErro
     Ok(FormatI::new(rs, rt, imm as u16))
 }
 
-fn try_parse_ins_branch(args: &str, line: &str, pc: u32, labels: &Option<HashMap<String, u32>>) -> Result<FormatI, AssemblerError> {
+fn try_parse_ins_branch(
+    args: &str,
+    line: &str,
+    pc: u32,
+    labels: &Option<HashMap<String, u32>>,
+) -> Result<FormatI, AssemblerError> {
     let mut args = args.split(',');
 
     let rs = args
@@ -132,12 +138,19 @@ fn try_parse_ins_branch(args: &str, line: &str, pc: u32, labels: &Option<HashMap
         return Err(AssemblerError::BranchOffsetUnaligned(offset));
     }
 
-    let offset: i16 = (offset / 4).try_into().map_err(|_| AssemblerError::OffsetTooLarge(offset))?;
+    let offset: i16 = (offset / 4)
+        .try_into()
+        .map_err(|_| AssemblerError::OffsetTooLarge(offset))?;
 
     Ok(FormatI::new(rs, rt, offset as u16))
 }
 
-fn try_parse_ins_jump(args: &str, line: &str, pc: u32, labels: &Option<HashMap<String, u32>>) -> Result<FormatJ, AssemblerError> {
+fn try_parse_ins_jump(
+    args: &str,
+    line: &str,
+    pc: u32,
+    labels: &Option<HashMap<String, u32>>,
+) -> Result<FormatJ, AssemblerError> {
     let mut args = args.split(',');
 
     let label = args
@@ -164,7 +177,7 @@ fn try_parse_ins_jump(args: &str, line: &str, pc: u32, labels: &Option<HashMap<S
         return Err(AssemblerError::JumpTargetUnaligned(target));
     }
     if target & 0xF000_0000 != (pc + 4) & 0xF000_0000 {
-        return Err(AssemblerError::JumpTooFar { target, pc })
+        return Err(AssemblerError::JumpTooFar { target, pc });
     }
 
     Ok(FormatJ::new((target / 4) & 0x03FF_FFFF))
