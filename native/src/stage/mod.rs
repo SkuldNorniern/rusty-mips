@@ -3,11 +3,9 @@ pub mod id_ex;
 pub mod if_id;
 pub mod mem_wb;
 
-
 use crate::architecture::pipes;
 
-pub fn if_id_stage(if_id: &mut pipes::if_pipe ) -> pipes::id_pipe {
-
+pub fn if_id_stage(if_id: &mut pipes::if_pipe) -> pipes::id_pipe {
     let id_ex = if_id::next(if_id);
     id_ex
 }
