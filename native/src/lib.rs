@@ -1,4 +1,4 @@
-mod arch;
+mod architecture;
 mod assembler;
 mod component;
 mod stage;
