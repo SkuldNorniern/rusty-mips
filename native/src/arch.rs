@@ -51,13 +51,16 @@ impl Processor {
         self.pc = self.pc + 4;
         let mut wtr = vec![];
         wtr.write_u32::<NativeEndian>(self.pc).unwrap();
-        if self.if_id.is_empty()  == false {
+        if self.if_id.is_empty() == false {
             self.id_ex = stage::if_id_stage(&mut self.if_id);
             self.if_id.drain();
         }
         if self.is_hazard == false {
-            self.if_id.insert(String::from("NPC") ,wtr);
-            self.if_id.insert(String::from("INST"), self.instructions[self.cur_line as usize].data.clone());
+            self.if_id.insert(String::from("NPC"), wtr);
+            self.if_id.insert(
+                String::from("INST"),
+                self.instructions[self.cur_line as usize].data.clone(),
+            );
             self.cur_line = self.cur_line + 1;
         }
         self.is_hazard = false;
@@ -85,10 +88,7 @@ mod tests {
         proc.add_instruction(Block { data: wtr });
         proc.next();
         let mut rdrins = Cursor::new(proc.if_id.get("INST").unwrap());
-        assert_eq!(
-            rdrins.read_u32::<NativeEndian>().unwrap(),
-            0x00000000
-        );
+        assert_eq!(rdrins.read_u32::<NativeEndian>().unwrap(), 0x00000000);
     }
     #[test]
     fn test4() {
@@ -101,16 +101,9 @@ mod tests {
             data: vec![0x00, 0x00, 0x40, 0x00],
         });
         let mut rdrins = Cursor::new(proc.if_id.get("INST").unwrap());
-        assert_eq!(
-            rdrins.read_u32::<NativeEndian>().unwrap(),
-            0x00000000
-        );
+        assert_eq!(rdrins.read_u32::<NativeEndian>().unwrap(), 0x00000000);
         proc.next();
-        ;
         let mut rdrins = Cursor::new(proc.if_id.get("INST").unwrap());
-        assert_eq!(
-            rdrins.read_u32::<NativeEndian>().unwrap(),
-            0x00400000
-        );
+        assert_eq!(rdrins.read_u32::<NativeEndian>().unwrap(), 0x00400000);
     }
 }

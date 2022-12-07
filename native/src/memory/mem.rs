@@ -1,7 +1,7 @@
+use super::segment::Segment;
+use byteorder::{NativeEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::iter::FromIterator;
-use byteorder::{NativeEndian, ReadBytesExt};
-use crate::assembler::Segment;
 
 pub struct Memory {
     read_only_segments: Vec<Segment>,
@@ -10,7 +10,7 @@ pub struct Memory {
 impl Memory {
     pub fn new(segments: &[Segment]) -> Self {
         Memory {
-            read_only_segments: Vec::from_iter(segments.iter().cloned())
+            read_only_segments: Vec::from_iter(segments.iter().cloned()),
         }
     }
 
@@ -26,6 +26,5 @@ impl Memory {
         0
     }
 
-    pub fn write_u32(&self, addr: u32, data: u32) {
-    }
+    pub fn write_u32(&self, addr: u32, data: u32) {}
 }

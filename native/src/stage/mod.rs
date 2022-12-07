@@ -4,7 +4,7 @@ pub mod id_ex;
 pub mod if_id;
 pub mod mem_wb;
 
-pub fn if_id_stage(if_id: &mut HashMap<String, Vec<u8>> ) -> HashMap<String, Vec<u8>> {
+pub fn if_id_stage(if_id: &mut HashMap<String, Vec<u8>>) -> HashMap<String, Vec<u8>> {
     let id_ex = if_id::next(if_id);
     id_ex
 }
