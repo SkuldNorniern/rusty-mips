@@ -1,4 +1,5 @@
 use byteorder::{ByteOrder, NativeEndian, ReadBytesExt, WriteBytesExt};
+use std::collections::HashMap;
 use std::io::Cursor;
 
 use super::stage;
@@ -15,10 +16,10 @@ pub struct Processor {
     instructions: Vec<Block>,
     memory: [u32; 65536],
     registers: [u32; 32],
-    if_id: Vec<u8>,
-    id_ex: Vec<u8>,
-    ex_mem: Vec<u8>,
-    mem_wb: Vec<u8>,
+    if_id: HashMap<String, Vec<u8>>,
+    id_ex: HashMap<String, Vec<u8>>,
+    ex_mem: HashMap<String, Vec<u8>>,
+    mem_wb: HashMap<String, Vec<u8>>,
     is_hazard: bool,
     cur_line: i32,
 }
@@ -32,10 +33,10 @@ impl Processor {
             instructions: Vec::new(),
             memory: [0; 65536],
             registers: [0; 32],
-            if_id: Vec::new(),
-            id_ex: Vec::new(),
-            ex_mem: Vec::new(),
-            mem_wb: Vec::new(),
+            if_id: HashMap::new(),
+            id_ex: HashMap::new(),
+            ex_mem: HashMap::new(),
+            mem_wb: HashMap::new(),
             is_hazard: false,
             cur_line: 0,
         };
@@ -50,14 +51,13 @@ impl Processor {
         self.pc = self.pc + 4;
         let mut wtr = vec![];
         wtr.write_u32::<NativeEndian>(self.pc).unwrap();
-        if self.if_id.len() > 0 {
-            stage::if_id_stage(&mut self.if_id);
-            self.if_id.clear();
+        if self.if_id.is_empty()  == false {
+            self.id_ex = stage::if_id_stage(&mut self.if_id);
+            self.if_id.drain();
         }
         if self.is_hazard == false {
-            self.if_id.append(&mut wtr);
-            self.if_id
-                .append(&mut self.instructions[self.cur_line as usize].data);
+            self.if_id.insert(String::from("NPC") ,wtr);
+            self.if_id.insert(String::from("INST"), self.instructions[self.cur_line as usize].data.clone());
             self.cur_line = self.cur_line + 1;
         }
         self.is_hazard = false;
@@ -84,9 +84,10 @@ mod tests {
 
         proc.add_instruction(Block { data: wtr });
         proc.next();
+        let mut rdrins = Cursor::new(proc.if_id.get("INST").unwrap());
         assert_eq!(
-            proc.if_id,
-            vec![0x04, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00]
+            rdrins.read_u32::<NativeEndian>().unwrap(),
+            0x00000000
         );
     }
     #[test]
@@ -99,14 +100,17 @@ mod tests {
         proc.add_instruction(Block {
             data: vec![0x00, 0x00, 0x40, 0x00],
         });
+        let mut rdrins = Cursor::new(proc.if_id.get("INST").unwrap());
         assert_eq!(
-            proc.if_id,
-            vec![0x04, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00]
+            rdrins.read_u32::<NativeEndian>().unwrap(),
+            0x00000000
         );
         proc.next();
+        ;
+        let mut rdrins = Cursor::new(proc.if_id.get("INST").unwrap());
         assert_eq!(
-            proc.if_id,
-            vec![0x08, 0x00, 0x40, 0x00, 0x00, 0x00, 0x40, 0x00]
+            rdrins.read_u32::<NativeEndian>().unwrap(),
+            0x00400000
         );
     }
 }
