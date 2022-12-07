@@ -1,16 +1,19 @@
+use super::segment::Segment;
+use byteorder::{NativeEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::iter::FromIterator;
-use byteorder::{NativeEndian, ReadBytesExt};
-use crate::assembler::Segment;
+use crate::memory::EndianMode;
 
 pub struct Memory {
+    endian: EndianMode,
     read_only_segments: Vec<Segment>,
 }
 
 impl Memory {
-    pub fn new(segments: &[Segment]) -> Self {
+    pub fn new(endian: EndianMode, segments: &[Segment]) -> Self {
         Memory {
-            read_only_segments: Vec::from_iter(segments.iter().cloned())
+            endian,
+            read_only_segments: Vec::from_iter(segments.iter().cloned()),
         }
     }
 
@@ -18,14 +21,12 @@ impl Memory {
         for seg in &self.read_only_segments {
             if seg.address_range().contains(&addr) {
                 let slice = &seg.data[(addr - seg.base_addr) as usize..];
-                let mut cursor = Cursor::new(slice);
-                return cursor.read_u32::<NativeEndian>().unwrap();
+                return self.endian.read_u32(slice);
             }
         }
 
         0
     }
 
-    pub fn write_u32(&self, addr: u32, data: u32) {
-    }
+    pub fn write_u32(&self, addr: u32, data: u32) {}
 }

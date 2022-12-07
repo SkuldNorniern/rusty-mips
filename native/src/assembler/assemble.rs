@@ -1,8 +1,8 @@
 use super::error::AssemblerError;
 use super::instruction::{FormatI, FormatR, Instruction};
-use super::segment::Segment;
 use crate::assembler::instruction::FormatJ;
 use crate::component::RegisterName;
+use crate::memory::{EndianMode, Segment};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
@@ -213,7 +213,11 @@ fn range_overlaps(a: RangeInclusive<u32>, b: RangeInclusive<u32>) -> bool {
     !a.is_empty() && !b.is_empty() && a.start() <= b.end() && b.start() <= a.end()
 }
 
-fn parse(asm: &str, labels: &Option<HashMap<String, u32>>) -> Result<Vec<Segment>, AssemblerError> {
+fn parse(
+    endian: EndianMode,
+    asm: &str,
+    labels: &Option<HashMap<String, u32>>,
+) -> Result<Vec<Segment>, AssemblerError> {
     let mut segs = vec![];
     let mut curr_seg: Option<Segment> = None;
     let mut global_labels = HashSet::new();
@@ -244,9 +248,9 @@ fn parse(asm: &str, labels: &Option<HashMap<String, u32>>) -> Result<Vec<Segment
         if first_token == ".text" || first_token == ".data" {
             if let Some(x) = curr_seg {
                 if is_text_seg {
-                    next_text_addr = x.base_addr + x.data.len() as u32;
+                    next_text_addr = x.next_address();
                 } else {
-                    next_data_addr = x.base_addr + x.data.len() as u32;
+                    next_data_addr = x.next_address();
                 }
 
                 segs.push(x);
@@ -280,7 +284,7 @@ fn parse(asm: &str, labels: &Option<HashMap<String, u32>>) -> Result<Vec<Segment
                 }
             }
 
-            curr_seg = Some(Segment::new(base_addr));
+            curr_seg = Some(Segment::new(base_addr, endian));
             bail_trailing_token(tokens)?;
         } else if first_token == ".globl" {
             let label = tokens.next().ok_or(AssemblerError::RequiredArgNotFound)?;
@@ -304,22 +308,22 @@ fn parse(asm: &str, labels: &Option<HashMap<String, u32>>) -> Result<Vec<Segment
                 });
 
             for num in values {
-                seg.data.extend_from_slice(&(num? as u32).to_ne_bytes());
+                seg.append_u32(num? as u32);
             }
         } else if let Some(label) = first_token.strip_suffix(':') {
             let seg = curr_seg
                 .as_mut()
                 .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
 
-            seg.labels.insert(label.into(), seg.data.len() as u32);
+            seg.append_label(label);
         } else {
             let seg = curr_seg
                 .as_mut()
                 .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
-            let pc = seg.base_addr + seg.data.len() as u32;
+            let pc = seg.next_address();
             let ins = try_parse_ins(line, first_token, pc, labels)?;
 
-            seg.data.extend_from_slice(&ins.encode().to_ne_bytes());
+            seg.append_u32(ins.encode());
         }
     }
 
@@ -331,21 +335,21 @@ fn parse(asm: &str, labels: &Option<HashMap<String, u32>>) -> Result<Vec<Segment
 }
 
 #[allow(unused)]
-pub fn assemble(asm: &str) -> Result<Vec<Segment>, AssemblerError> {
+pub fn assemble(endian: EndianMode, asm: &str) -> Result<Vec<Segment>, AssemblerError> {
     // assemble
-    let segments = parse(asm, &None)?;
+    let segments = parse(endian, asm, &None)?;
 
     // collect labels
     let mut labels = HashMap::new();
     for seg in &segments {
-        for (k, v) in &seg.labels {
+        for (k, v) in seg.labels() {
             labels.insert(k.clone(), seg.base_addr + v);
         }
     }
 
     // reassemble with label
     drop(segments);
-    let segments = parse(asm, &Some(labels))?;
+    let segments = parse(endian, asm, &Some(labels))?;
 
     // check overlap
     for a in &segments {
@@ -369,26 +373,36 @@ mod test {
     use byteorder::{NativeEndian, ReadBytesExt};
     use std::io::Cursor;
 
+    lazy_static! {
+        static ref NE: EndianMode = EndianMode::native();
+    }
+
     #[test]
     fn assemble_empty() {
-        assert_eq!(assemble("").unwrap().is_empty(), true);
-        assert_eq!(assemble("\n\n\n\n\n\n").unwrap().is_empty(), true);
+        assert_eq!(assemble(*NE, "").unwrap().is_empty(), true);
+        assert_eq!(assemble(*NE, "\n\n\n\n\n\n").unwrap().is_empty(), true);
     }
 
     #[test]
     fn assemble_empty_seg() {
-        assert_eq!(assemble(".text\n.data\n.text\n.data").unwrap().len(), 4);
-        assert_eq!(assemble(".data\n.text\n.text\n.text").unwrap().len(), 4);
+        assert_eq!(
+            assemble(*NE, ".text\n.data\n.text\n.data").unwrap().len(),
+            4
+        );
+        assert_eq!(
+            assemble(*NE, ".data\n.text\n.text\n.text").unwrap().len(),
+            4
+        );
     }
 
     #[test]
     fn assemble_arith() {
         let code = ".text\nadd $0, $4, $12\nsub $2, $s0, $zero";
-        let segs = assemble(code).unwrap();
+        let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].base_addr, 0x00400000);
         assert_eq!(segs[0].data.len(), 8);
-        assert!(segs[0].labels.is_empty());
+        assert!(segs[0].labels().is_empty());
 
         let mut data = Cursor::new(&segs[0].data);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x008c0020);
@@ -398,11 +412,11 @@ mod test {
     #[test]
     fn assemble_data() {
         let code = ".data\n.word 123, 0x123, 0o123\n.word 0xffffffff";
-        let segs = assemble(code).unwrap();
+        let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].base_addr, 0x10000000);
         assert_eq!(segs[0].data.len(), 16);
-        assert!(segs[0].labels.is_empty());
+        assert!(segs[0].labels().is_empty());
 
         let mut data = Cursor::new(&segs[0].data);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 123);
@@ -414,11 +428,11 @@ mod test {
     #[test]
     fn assemble_memory() {
         let code = ".text\nlw $3, 1234($5)\nsw $s1, -12($gp)\nlw $7, 0x7fff($4)";
-        let segs = assemble(code).unwrap();
+        let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].base_addr, 0x00400000);
         assert_eq!(segs[0].data.len(), 12);
-        assert!(segs[0].labels.is_empty());
+        assert!(segs[0].labels().is_empty());
 
         let mut data = Cursor::new(&segs[0].data);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x8ca304d2);
@@ -429,7 +443,7 @@ mod test {
     #[test]
     fn assemble_memory_fail() {
         let code = ".text\nlw $7, 0x8000($4)";
-        let result = assemble(code);
+        let result = assemble(*NE, code);
         assert!(result.is_err());
         if let AssemblerError::OffsetTooLarge(_) = result.unwrap_err() {
             // ok
@@ -441,11 +455,11 @@ mod test {
     #[test]
     fn assemble_branch_raw() {
         let code = ".text\nadd $0, $0, $0\nbeq $4, $zero, 92";
-        let segs = assemble(code).unwrap();
+        let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].base_addr, 0x00400000);
         assert_eq!(segs[0].data.len(), 8);
-        assert!(segs[0].labels.is_empty());
+        assert!(segs[0].labels().is_empty());
 
         let mut data = Cursor::new(&segs[0].data);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x00000020);
@@ -456,11 +470,11 @@ mod test {
     fn assemble_branch_label() {
         // Contains no branch delay slot!
         let code = ".text\nbeq $0, $0, fin\n.L1:\nbeq $s0, $28, .L1\nbeq $0, $28, fin\nfin:\nbeq $10, $11, .L1";
-        let segs = assemble(code).unwrap();
+        let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].base_addr, 0x00400000);
         assert_eq!(segs[0].data.len(), 16);
-        assert_eq!(segs[0].labels.len(), 2);
+        assert_eq!(segs[0].labels().len(), 2);
 
         let mut data = Cursor::new(&segs[0].data);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10000002);
@@ -473,11 +487,11 @@ mod test {
     fn assemble_jump() {
         // Contains no branch delay slot!
         let code = ".text 0x00400024\nbeq $0, $0, fin\n.L1:\nadd $s1, $0, $0\nfin:\nj .L1";
-        let segs = assemble(code).unwrap();
+        let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].base_addr, 0x00400024);
         assert_eq!(segs[0].data.len(), 12);
-        assert_eq!(segs[0].labels.len(), 2);
+        assert_eq!(segs[0].labels().len(), 2);
 
         let mut data = Cursor::new(&segs[0].data);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10000001);
