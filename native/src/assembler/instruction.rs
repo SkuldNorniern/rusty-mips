@@ -55,21 +55,20 @@ impl FormatI {
 
 #[derive(Copy, Clone)]
 pub struct FormatJ {
-    addr: u32,
+    target: u32,
 }
 
 impl FormatJ {
-    fn new(addr: u32) -> Self {
-        assert_eq!(addr & 0x0000_0003, 0, "address must be aligned");
-        assert_eq!(addr & 0xf000_0000, 0, "address must have top 4 bits zero");
+    pub(crate) fn new(target: u32) -> Self {
+        assert_eq!(target & 0xfc00_0000, 0, "target must have top 6 bits zero");
 
         FormatJ {
-            addr
+            target
         }
     }
 
     fn encode(&self, opcode: u8) -> u32 {
-        (opcode as u32) << 26 | self.addr
+        (opcode as u32) << 26 | self.target
     }
 }
 

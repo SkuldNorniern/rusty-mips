@@ -33,6 +33,15 @@ pub enum AssemblerError {
     #[error("offset {0} is too large to encode")]
     OffsetTooLarge(i64),
 
+    #[error("branch offset {0} is unaligned")]
+    BranchOffsetUnaligned(i64),
+
     #[error("jump target 0x{target:08x} is too far to encode from pc=0x{pc:08x}")]
     JumpTooFar { target: u32, pc: u32 },
+
+    #[error("jump target {0} is unaligned")]
+    JumpTargetUnaligned(u32),
+
+    #[error("label `{0}` was not found")]
+    LabelNotFound(String),
 }

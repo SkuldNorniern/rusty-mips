@@ -7,6 +7,7 @@ use std::ops::RangeInclusive;
 use std::str::FromStr;
 use lazy_static::lazy_static;
 use regex::Regex;
+use crate::assembler::instruction::FormatJ;
 use crate::component::RegisterName;
 
 fn try_parse_unsigned(text: &str) -> Option<u64> {
@@ -94,15 +95,92 @@ fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerErro
     Ok(FormatI::new(rs, rt, imm as u16))
 }
 
-fn try_parse_ins<'a>(
-    line: &'a str,
-    mnemonic: &'a str,
+fn try_parse_ins_branch(args: &str, line: &str, pc: u32, labels: &Option<HashMap<String, u32>>) -> Result<FormatI, AssemblerError> {
+    let mut args = args.split(',');
+
+    let rs = args
+        .next()
+        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .map(|x| x.trim())
+        .and_then(try_parse_reg)?;
+    let rt = args
+        .next()
+        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .map(|x| x.trim())
+        .and_then(try_parse_reg)?;
+    let label = args
+        .next()
+        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .map(|x| x.trim())?;
+
+    bail_trailing_token(args)?;
+
+    let offset = if let Some(x) = try_parse_signed(label) {
+        // parse as offset
+        x
+    } else if let Some(map) = labels {
+        // parse as label
+        map.get(label)
+            .map(|x| *x as i64 - pc as i64 - 4)
+            .ok_or_else(|| AssemblerError::LabelNotFound(label.into()))?
+    } else {
+        // parse as label, but it's first pass; treat as 0
+        0
+    };
+
+    if offset % 4 != 0 {
+        return Err(AssemblerError::BranchOffsetUnaligned(offset));
+    }
+
+    let offset: i16 = (offset / 4).try_into().map_err(|_| AssemblerError::OffsetTooLarge(offset))?;
+
+    Ok(FormatI::new(rs, rt, offset as u16))
+}
+
+fn try_parse_ins_jump(args: &str, line: &str, pc: u32, labels: &Option<HashMap<String, u32>>) -> Result<FormatJ, AssemblerError> {
+    let mut args = args.split(',');
+
+    let label = args
+        .next()
+        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .map(|x| x.trim())?;
+
+    bail_trailing_token(args)?;
+
+    let target = if let Some(x) = try_parse_unsigned(label) {
+        // parse as target
+        x as u32
+    } else if let Some(map) = labels {
+        // parse as label
+        map.get(label)
+            .ok_or_else(|| AssemblerError::LabelNotFound(label.into()))
+            .map(|x| *x)?
+    } else {
+        // parse as label, but it's first pass; treat as 0
+        0
+    };
+
+    if target % 4 != 0 {
+        return Err(AssemblerError::JumpTargetUnaligned(target));
+    }
+    if target & 0xF000_0000 != (pc + 4) & 0xF000_0000 {
+        return Err(AssemblerError::JumpTooFar { target, pc })
+    }
+
+    Ok(FormatJ::new((target / 4) & 0x03FF_FFFF))
+}
+
+fn try_parse_ins(
+    line: &str,
+    mnemonic: &str,
+    pc: u32,
     labels: &Option<HashMap<String, u32>>,
 ) -> Result<Instruction, AssemblerError> {
     let args = line
         .trim()
         .strip_prefix(mnemonic)
-        .expect("line should start with mnemonic");
+        .expect("line should start with mnemonic")
+        .trim_start();
 
     Ok(match mnemonic {
         "and" => Instruction::And(try_parse_ins_3arg(args, line)?),
@@ -112,6 +190,8 @@ fn try_parse_ins<'a>(
         "slt" => Instruction::Slt(try_parse_ins_3arg(args, line)?),
         "lw" => Instruction::Lw(try_parse_ins_memory(args, line)?),
         "sw" => Instruction::Sw(try_parse_ins_memory(args, line)?),
+        "beq" => Instruction::Beq(try_parse_ins_branch(args, line, pc, labels)?),
+        "j" => Instruction::J(try_parse_ins_jump(args, line, pc, labels)?),
         _ => return Err(AssemblerError::UnknownInstruction(mnemonic.into())),
     })
 }
@@ -213,11 +293,18 @@ fn parse(asm: &str, labels: &Option<HashMap<String, u32>>) -> Result<Vec<Segment
             for num in values {
                 seg.data.extend_from_slice(&(num? as u32).to_ne_bytes());
             }
-        } else {
-            let ins = try_parse_ins(line, first_token, labels)?;
+        } else if let Some(label) = first_token.strip_suffix(':') {
             let seg = curr_seg
                 .as_mut()
                 .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
+
+            seg.labels.insert(label.into(), seg.data.len() as u32);
+        } else {
+            let seg = curr_seg
+                .as_mut()
+                .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
+            let pc = seg.base_addr + seg.data.len() as u32;
+            let ins = try_parse_ins(line, first_token, pc, labels)?;
 
             seg.data.extend_from_slice(&ins.encode().to_ne_bytes());
         }
@@ -336,5 +423,52 @@ mod test {
         } else {
             panic!("expected OffsetTooLarge error");
         }
+    }
+
+    #[test]
+    fn assemble_branch_raw() {
+        let code = ".text\nadd $0, $0, $0\nbeq $4, $zero, 92";
+        let segs = assemble(code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].data.len(), 8);
+        assert!(segs[0].labels.is_empty());
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x00000020);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10800017);
+    }
+
+    #[test]
+    fn assemble_branch_label() {
+        // Contains no branch delay slot!
+        let code = ".text\nbeq $0, $0, fin\n.L1:\nbeq $s0, $28, .L1\nbeq $0, $28, fin\nfin:\nbeq $10, $11, .L1";
+        let segs = assemble(code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].data.len(), 16);
+        assert_eq!(segs[0].labels.len(), 2);
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10000002);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x121cffff);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x101c0000);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x114bfffd);
+    }
+
+    #[test]
+    fn assemble_jump() {
+        // Contains no branch delay slot!
+        let code = ".text 0x00400024\nbeq $0, $0, fin\n.L1:\nadd $s1, $0, $0\nfin:\nj .L1";
+        let segs = assemble(code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400024);
+        assert_eq!(segs[0].data.len(), 12);
+        assert_eq!(segs[0].labels.len(), 2);
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10000001);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x00008820);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0810000a);
     }
 }
