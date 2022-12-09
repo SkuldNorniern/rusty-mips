@@ -22,6 +22,7 @@ export const NativeLibProvider = ({ children }: Props): JSX.Element => {
     }
 
     return function cleanup () {
+      console.log('Cleaning up native module');
       window.nativeLib.finalize();
     };
   }, []);
