@@ -24,7 +24,6 @@ pub struct Processor {
 }
 impl Processor {
     pub fn new() -> Processor {
-        
         Processor {
             pc: 0x00400000,
             hi: 0x0,

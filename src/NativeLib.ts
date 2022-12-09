@@ -1,5 +1,8 @@
+export const API_VERSION = 1;
+
 interface NativeLib {
-  hello: () => string
+  init: () => number
+  finalize: () => void
 }
 
 export default NativeLib;

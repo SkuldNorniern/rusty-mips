@@ -2,15 +2,12 @@ mod architecture;
 mod assembler;
 mod component;
 mod memory;
+mod webapi;
 
 use neon::prelude::*;
 
-fn hello(mut cx: FunctionContext) -> JsResult<JsString> {
-    Ok(cx.string("Hello, world!"))
-}
-
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
-    cx.export_function("hello", hello)?;
+    webapi::register_functions(&mut cx)?;
     Ok(())
 }
