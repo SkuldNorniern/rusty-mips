@@ -4,5 +4,5 @@ mod segment;
 mod slowmem;
 
 pub use endian_mode::EndianMode;
-pub use memory_trait::create_memory;
+pub use memory_trait::{create_memory, Memory};
 pub use segment::Segment;

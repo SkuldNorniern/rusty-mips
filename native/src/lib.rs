@@ -3,6 +3,7 @@ mod assembler;
 mod component;
 mod memory;
 mod webapi;
+mod interpreter;
 
 use neon::prelude::*;
 
