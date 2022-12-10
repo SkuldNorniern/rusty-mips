@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use lockfree::map::Map;
 use std::alloc::Layout;
 use std::ffi::c_void;
-use std::ptr::null_mut;
+use std::ptr::{NonNull, null_mut};
 use std::sync::atomic::{AtomicIsize, Ordering};
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{
@@ -138,6 +138,10 @@ unsafe extern "system" fn exception_handler(info: *mut EXCEPTION_POINTERS) -> i3
 impl Memory for FastMemWindows {
     fn endian(&self) -> EndianMode {
         EndianMode::native()
+    }
+
+    fn fastmem_addr(&self) -> Option<NonNull<u8>> {
+        NonNull::new(self.base_addr)
     }
 
     fn read_u8(&self, addr: u32) -> u8 {

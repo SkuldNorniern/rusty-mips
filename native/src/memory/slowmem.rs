@@ -2,6 +2,7 @@ use crate::memory::memory_trait::Memory;
 use crate::memory::{EndianMode, Segment};
 use std::alloc::Layout;
 use std::convert::TryInto;
+use std::ptr::NonNull;
 
 const PAGE_SIZE: u32 = 4096;
 
@@ -98,6 +99,10 @@ impl SlowMem {
 impl Memory for SlowMem {
     fn endian(&self) -> EndianMode {
         self.endian
+    }
+
+    fn fastmem_addr(&self) -> Option<NonNull<u8>> {
+        None
     }
 
     fn read_u8(&self, addr: u32) -> u8 {

@@ -102,6 +102,10 @@ impl Memory for FastMemUnix {
         EndianMode::native()
     }
 
+    fn fastmem_addr(&self) -> Option<NonNull<u8>> {
+        NonNull::new(self.base_addr)
+    }
+
     fn read_u8(&self, addr: u32) -> u8 {
         unsafe { (self.base_addr.add(addr as usize) as *mut u8).read_unaligned() }
     }

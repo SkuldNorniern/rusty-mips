@@ -1,7 +1,11 @@
+use std::ptr::NonNull;
 use crate::memory::{EndianMode, Segment};
 
 pub trait Memory {
     fn endian(&self) -> EndianMode;
+
+    // If this memory type is fastmem-compatible, return the base address
+    fn fastmem_addr(&self) -> Option<NonNull<u8>>;
 
     fn read_u8(&self, addr: u32) -> u8;
     fn read_u16(&self, addr: u32) -> u16;
