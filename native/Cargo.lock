@@ -270,6 +270,7 @@ dependencies = [
  "byteorder",
  "cfg-if",
  "lazy_static",
+ "libc",
  "lockfree",
  "neon",
  "parking_lot",

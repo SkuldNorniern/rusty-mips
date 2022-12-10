@@ -20,9 +20,12 @@ pub fn create_memory(endian: EndianMode, segments: &[Segment]) -> Box<dyn Memory
     cfg_if::cfg_if! {
         if #[cfg(test)] {
             SlowMem::new(endian, segments)
-        }
-        else if #[cfg(all(windows, target_pointer_width = "64"))] {
+        } else if #[cfg(windows)] {
             super::fastmem_windows::FastMemWindows::try_new(endian, segments)
+                .map(|x| -> Box<dyn Memory> { x })
+                .unwrap_or_else(|| SlowMem::new(endian, segments))
+        } else if #[cfg(unix)] {
+            super::fastmem_unix::FastMemUnix::try_new(endian, segments)
                 .map(|x| -> Box<dyn Memory> { x })
                 .unwrap_or_else(|| SlowMem::new(endian, segments))
         } else {

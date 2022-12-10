@@ -6,6 +6,8 @@ mod slowmem;
 cfg_if::cfg_if! {
     if #[cfg(windows)] {
         mod fastmem_windows;
+    } else if #[cfg(unix)] {
+        mod fastmem_unix;
     }
 }
 
