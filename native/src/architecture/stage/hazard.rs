@@ -1,8 +1,8 @@
 use crate::architecture::pipes;
 use crate::architecture::units::forward_unit;
 
-pub fn hazard_ctrl(_if_id: pipes::IfPipe,_id_ex: pipes::IdPipe , _fwd_unit: forward_unit::FwdUnit) -> forward_unit::FwdUnit {
-    let mut fwd_unit = _fwd_unit;
+pub fn hazard_ctrl(_if_id: &mut pipes::IfPipe,_id_ex: &mut pipes::IdPipe , _fwd_unit: forward_unit::FwdUnit) -> forward_unit::FwdUnit {
+    let mut fwd_unit = _fwd_unit.clone();
 
     let if_id_rs = (_if_id.inst & 0x03E00000) >> 21;
     let if_id_rt = (_if_id.inst & 0x001F0000) >> 16;

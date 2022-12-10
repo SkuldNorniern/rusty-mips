@@ -47,7 +47,12 @@ impl Processor {
     */
     pub fn next(&mut self) {
         //println!("PC: {:#x}",self.instructions[self.cur_line as usize].base_addr);
-
+        self.fwd_unit = stage::forward::fwd_ctrl(
+            &mut self.ex_mem,
+            &mut self.mem_wb,
+            &mut self.id_ex,
+            self.fwd_unit,
+        );
         let wb_tup = stage::wb_stage::next(&mut self.mem_wb);
         self.wb = wb_tup.0;
         self.registers[wb_tup.1 .0 as usize] = wb_tup.1 .1;
@@ -57,7 +62,7 @@ impl Processor {
         if mem_tup.1 .2 {
             self.memory.write_u32(mem_tup.1 .0, mem_tup.1 .1);
         }
-        self.ex_mem = stage::ex_stage::next(&mut self.id_ex);
+        self.ex_mem = stage::ex_stage::next(&mut self.id_ex, self.fwd_unit);
         self.id_ex =
             stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, self.registers);
         let cur_inst = self.memory.read_u32(self.pc);
@@ -66,8 +71,8 @@ impl Processor {
         if self.if_id.ran == self.pc {
             self.cur_line += 1;
         }
+        self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id,&mut self.id_ex, self.fwd_unit);
         self.pc += 4;
-        self.fwd_unit.hazard = false;
     }
 }
 
@@ -119,7 +124,6 @@ mod tests {
         let mut proc = Processor::new(".text\nadd $18, $16, $17");
         //proc.add_instruction(Block { data: wtr });
         proc.next();
-        let test: u32 = 0x02114020;
         //let sample = units::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
 
         assert_eq!(proc.id_ex.data_a, 0x0);
