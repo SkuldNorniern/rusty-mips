@@ -1,5 +1,6 @@
 use super::pipes;
 use super::stage;
+use super::units;
 use byteorder::{ByteOrder, NativeEndian, ReadBytesExt, WriteBytesExt};
 use std::io::Cursor;
 
@@ -29,8 +30,8 @@ impl Processor {
             hi: 0x0,
             lo: 0x0,
             instructions: Vec::new(),
-            memory: [0; 65536],
-            registers: [0; 32],
+            memory: [0x0; 65536],
+            registers: [0x0; 32],
             if_id: { pipes::IfPipe::default() },
             id_ex: { pipes::IdPipe::default() },
             ex_mem: { pipes::ExPipe::default() },
@@ -49,7 +50,11 @@ impl Processor {
         self.cur_addr = self.pc;
         self.pc += 4;
 
-        self.id_ex = stage::id_stage::id_next(&mut self.if_id, self.is_hazard, self.cur_addr);
+        let mem_tup = stage::mem_stage::next(&mut self.ex_mem, self.memory);
+        self.mem_wb = mem_tup.0;
+        self.memory = mem_tup.1;
+        self.ex_mem = stage::ex_stage::next(&mut self.id_ex);
+        self.id_ex = stage::id_stage::id_next(&mut self.if_id, self.is_hazard, self.registers);
         let mut rdr_inst = Cursor::new(self.instructions[self.cur_line as usize].data.clone());
         let cur_inst = rdr_inst.read_u32::<NativeEndian>().unwrap();
         self.if_id = stage::if_stage::if_next(self.pc, cur_inst, self.is_hazard, self.cur_addr);
@@ -106,7 +111,7 @@ mod tests {
         proc.add_instruction(Block { data: wtr });
         proc.next();
         let test: u32 = 0x02114020;
-        let sample = stage::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
+        let sample = units::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
 
         assert_eq!(proc.id_ex.ctr_unit.reg_dst, sample.reg_dst);
         assert_eq!(proc.id_ex.ctr_unit.branch, sample.branch);

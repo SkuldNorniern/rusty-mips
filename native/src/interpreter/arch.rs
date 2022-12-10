@@ -107,7 +107,7 @@ impl Interpreter {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::assembler::{assemble};
+    use crate::assembler::assemble;
     use crate::memory::{create_memory, EndianMode};
 
     const TEXT_ADDR: u32 = 0x00400000;
@@ -224,7 +224,9 @@ mod test {
 
     #[test]
     fn beq() {
-        let mut state = init_state(".text\nstart:\nadd $16, $16, $17\nbeq $16, $0, fin\nj start\nfin:\nj 0x00001234");
+        let mut state = init_state(
+            ".text\nstart:\nadd $16, $16, $17\nbeq $16, $0, fin\nj start\nfin:\nj 0x00001234",
+        );
         state.reg[16] = 3;
         state.reg[17] = -1_i32 as u32;
 

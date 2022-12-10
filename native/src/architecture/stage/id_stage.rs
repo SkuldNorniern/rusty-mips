@@ -1,9 +1,13 @@
-use super::control_unit;
 use crate::architecture::pipes;
+use crate::architecture::units::control_unit;
 
-pub fn id_next(_if_id: &mut pipes::IfPipe, _is_hazard: bool, _cur_addr: u32) -> pipes::IdPipe {
+pub fn id_next(
+    _if_id: &mut pipes::IfPipe,
+    _is_hazard: bool,
+    _reg_list: [u32; 32],
+) -> pipes::IdPipe {
     let mut id_ex = pipes::IdPipe::default();
-    id_ex.ran = _cur_addr;
+    id_ex.ran = _if_id.ran;
 
     if _is_hazard {
         id_ex.ctr_unit.reg_dst = 0b0;
@@ -20,8 +24,8 @@ pub fn id_next(_if_id: &mut pipes::IfPipe, _is_hazard: bool, _cur_addr: u32) -> 
     }
 
     id_ex.npc = _if_id.npc;
-    id_ex.data_a = (_if_id.inst & 0x03E00000) >> 21;
-    id_ex.data_b = (_if_id.inst & 0x001F0000) >> 16;
+    id_ex.data_a = _reg_list[((_if_id.inst & 0x03E00000) >> 21) as usize];
+    id_ex.data_b = _reg_list[((_if_id.inst & 0x001F0000) >> 16) as usize];
     id_ex.rs = (_if_id.inst & 0x03E00000) >> 21;
     id_ex.rt = (_if_id.inst & 0x001F0000) >> 16;
     id_ex.rd = (_if_id.inst & 0x0000F800) >> 11;

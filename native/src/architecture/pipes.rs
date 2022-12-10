@@ -13,7 +13,7 @@ impl Default for IfPipe {
     }
 }
 
-pub struct CtrUnit {
+pub struct CtrUnitFull {
     pub reg_dst: u32,
     pub reg_write: u32,
     pub alu_src: u32,
@@ -23,9 +23,9 @@ pub struct CtrUnit {
     pub mem_write: u32,
     pub branch: u32,
 }
-impl Default for CtrUnit {
-    fn default() -> CtrUnit {
-        CtrUnit {
+impl Default for CtrUnitFull {
+    fn default() -> CtrUnitFull {
+        CtrUnitFull {
             reg_dst: 0b0,
             reg_write: 0b0,
             alu_src: 0b0,
@@ -46,7 +46,7 @@ pub struct IdPipe {
     pub rt: u32,
     pub rd: u32,
     pub imm: u32,
-    pub ctr_unit: CtrUnit,
+    pub ctr_unit: CtrUnitFull,
     pub ran: u32,
 }
 impl Default for IdPipe {
@@ -59,18 +59,37 @@ impl Default for IdPipe {
             rt: 0x00000000,
             rd: 0x00000000,
             imm: 0x00000000,
-            ctr_unit: CtrUnit::default(),
+            ctr_unit: CtrUnitFull::default(),
             ran: 0x00000000,
         }
     }
 }
 
+pub struct CtrUnitSlim {
+    pub reg_write: u32,
+    pub mem_to_reg: u32,
+    pub mem_read: u32,
+    pub mem_write: u32,
+    pub branch: u32,
+}
+impl Default for CtrUnitSlim {
+    fn default() -> CtrUnitSlim {
+        CtrUnitSlim {
+            reg_write: 0b0,
+            mem_to_reg: 0b0,
+            mem_read: 0b0,
+            mem_write: 0b0,
+            branch: 0b0,
+        }
+    }
+}
 pub struct ExPipe {
     pub branch_tgt: u32,
     pub zero: u32,
-    pub aluout: u32,
-    pub data2: u32,
+    pub alu_out: u32,
+    pub data_b: u32,
     pub rd: u32,
+    pub ctr_unit: CtrUnitSlim,
     pub ran: u32,
 }
 impl Default for ExPipe {
@@ -78,9 +97,10 @@ impl Default for ExPipe {
         ExPipe {
             branch_tgt: 0x00000000,
             zero: 0x00000000,
-            aluout: 0x00000000,
-            data2: 0x00000000,
+            alu_out: 0x00000000,
+            data_b: 0x00000000,
             rd: 0x00000000,
+            ctr_unit: CtrUnitSlim::default(),
             ran: 0x00000000,
         }
     }
@@ -88,16 +108,18 @@ impl Default for ExPipe {
 
 pub struct MemPipe {
     pub lmd: u32,
-    pub aluout: u32,
+    pub alu_out: u32,
     pub rd: u32,
+    pub ctr_unit: CtrUnitSlim,
     pub ran: u32,
 }
 impl Default for MemPipe {
     fn default() -> MemPipe {
         MemPipe {
             lmd: 0x00000000,
-            aluout: 0x00000000,
+            alu_out: 0x00000000,
             rd: 0x00000000,
+            ctr_unit: CtrUnitSlim::default(),
             ran: 0x00000000,
         }
     }

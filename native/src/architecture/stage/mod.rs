@@ -1,4 +1,3 @@
-pub mod control_unit;
 pub mod ex_stage;
 pub mod id_stage;
 pub mod if_stage;

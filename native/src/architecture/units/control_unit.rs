@@ -1,8 +1,8 @@
 use crate::architecture::pipes;
 
-pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
+pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
     match opcode {
-        0b000000 => pipes::CtrUnit {
+        0b000000 => pipes::CtrUnitFull {
             // R-Type
             reg_dst: 0b1,
             reg_write: 0b1,
@@ -13,7 +13,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b0,
         },
-        0b100011 => pipes::CtrUnit {
+        0b100011 => pipes::CtrUnitFull {
             // LW
             reg_dst: 0b0,
             reg_write: 0b1,
@@ -24,7 +24,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b0,
         },
-        0b101011 => pipes::CtrUnit {
+        0b101011 => pipes::CtrUnitFull {
             // SW
             reg_dst: 0b0,
             reg_write: 0b1,
@@ -35,7 +35,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b0,
         },
-        0b001000 => pipes::CtrUnit {
+        0b001000 => pipes::CtrUnitFull {
             // ADDI
             reg_dst: 0b0,
             reg_write: 0b1,
@@ -46,7 +46,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b0,
         },
-        0b000100 => pipes::CtrUnit {
+        0b000100 => pipes::CtrUnitFull {
             // BEQ
             reg_dst: 0b0,
             reg_write: 0b0,
@@ -57,7 +57,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b1,
         },
-        0b000101 => pipes::CtrUnit {
+        0b000101 => pipes::CtrUnitFull {
             // BNE
             reg_dst: 0b0,
             reg_write: 0b0,
@@ -68,7 +68,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b1,
         },
-        0b000010 => pipes::CtrUnit {
+        0b000010 => pipes::CtrUnitFull {
             // J
             reg_dst: 0b0,
             reg_write: 0b0,
@@ -79,7 +79,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b1,
         },
-        0b000011 => pipes::CtrUnit {
+        0b000011 => pipes::CtrUnitFull {
             // JAL
             reg_dst: 0b0,
             reg_write: 0b0,
@@ -90,7 +90,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b1,
         },
-        0b100000 => pipes::CtrUnit {
+        0b100000 => pipes::CtrUnitFull {
             // LB
             reg_dst: 0b0,
             reg_write: 0b1,
@@ -101,6 +101,6 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnit {
             mem_write: 0b0,
             branch: 0b0,
         },
-        _ => pipes::CtrUnit::default(),
+        _ => pipes::CtrUnitFull::default(),
     }
 }
