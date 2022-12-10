@@ -40,13 +40,7 @@ impl Processor {
             cur_line: 0,
         }
     }
-    /*
-    pub fn add_instruction(&mut self, instruction) {
-        self.instructions.push(instruction);
-    }
-    */
     pub fn next(&mut self) {
-        //println!("PC: {:#x}",self.instructions[self.cur_line as usize].base_addr);
         self.fwd_unit = stage::forward::fwd_ctrl(
             &mut self.ex_mem,
             &mut self.mem_wb,
@@ -71,7 +65,7 @@ impl Processor {
         if self.if_id.ran == self.pc {
             self.cur_line += 1;
         }
-        self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id,&mut self.id_ex, self.fwd_unit);
+        self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id, &mut self.id_ex, self.fwd_unit);
         self.pc += 4;
     }
 }
@@ -82,14 +76,12 @@ mod tests {
     #[test]
     fn processor_pc_value() {
         let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        //proc.add_instruction(Block { data: wtr });
         proc.next();
         assert_eq!(proc.pc, 0x00400004);
     }
     #[test]
     fn processor_cycle_1_inst() {
         let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        //proc.add_instruction(Block { data: wtr });
         proc.next();
         assert_eq!(proc.if_id.inst, 0x02119020);
     }
@@ -103,9 +95,78 @@ mod tests {
         assert_eq!(proc.if_id.inst, 0x02001022);
     }
     #[test]
+    fn processor_cycle_3_inst() {
+        let mut proc = Processor::new(".text\nadd $18, $16, $17\nsub $2, $s0, $zero");
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x02119020);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x02001022);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x0);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        assert_eq!(proc.ex_mem.alu_out, 0x9020);
+    }
+    #[test]
+    fn processor_cycle_4_inst() {
+        //TODO Finish this test
+        let mut proc =
+            Processor::new(".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5");
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x02119020);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x02001022);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x00858820);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        assert_eq!(proc.ex_mem.alu_out, 0x9020);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x0);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        //assert_eq!(proc.ex_mem.alu_out, );
+        //assert_eq!(proc.mem_wb.alu_out, );
+    }
+    #[test]
+    fn processor_cycle_5_inst() {
+        //TODO Finish this test
+        let mut proc = Processor::new(
+            ".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5\nadd $6, $7, $8",
+        );
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x02119020);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x02001022);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x00858820);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        assert_eq!(proc.ex_mem.alu_out, 0x9020);
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x00E83020);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        //assert_eq!(proc.ex_mem.alu_out, );
+        //assert_eq!(proc.mem_wb.alu_out, );
+        proc.next();
+        assert_eq!(proc.if_id.inst, 0x0);
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        //assert_eq!(proc.ex_mem.alu_out, );
+        //assert_eq!(proc.mem_wb.alu_out, );
+        assert_eq!(proc.registers[18], 0x0);
+    }
+    //TODO Add more tests
+    #[test]
     fn stage_id_control_unit() {
         let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        //proc.add_instruction(Block { data: wtr });
         proc.next();
         let test: u32 = 0x02114020;
         let sample = units::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
@@ -122,10 +183,7 @@ mod tests {
     #[test]
     fn stage_id_datas() {
         let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        //proc.add_instruction(Block { data: wtr });
         proc.next();
-        //let sample = units::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
-
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
     }

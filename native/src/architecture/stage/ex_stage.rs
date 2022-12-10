@@ -14,7 +14,7 @@ pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pip
 
     ex_mem.branch_tgt = _id_ex.npc + (_id_ex.imm << 2);
 
-    let mut alu_a = _fwd_unit.fwd_a;
+    let alu_a = _fwd_unit.fwd_a;
     let mut alu_b = _fwd_unit.fwd_b;
     if _id_ex.ctr_unit.alu_src == 0 {
         alu_b = _id_ex.imm;

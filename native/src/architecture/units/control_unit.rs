@@ -104,3 +104,20 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
         _ => pipes::CtrUnitFull::default(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ctrl_unit() {
+        use super::*;
+        let test = ctrl_unit(0b000000);
+        assert_eq!(test.reg_dst, 0b1);
+        assert_eq!(test.reg_write, 0b1);
+        assert_eq!(test.alu_src, 0b0);
+        assert_eq!(test.alu_op, 0b10);
+        assert_eq!(test.mem_to_reg, 0b0);
+        assert_eq!(test.mem_read, 0b0);
+        assert_eq!(test.mem_write, 0b0);
+        assert_eq!(test.branch, 0b0);
+    }
+}
