@@ -19,6 +19,7 @@ pub struct Processor {
     id_ex: pipes::IdPipe,
     ex_mem: pipes::ExPipe,
     mem_wb: pipes::MemPipe,
+    wb: pipes::WbPipe,
     is_hazard: bool,
     cur_addr: u32,
     cur_line: u32,
@@ -36,6 +37,7 @@ impl Processor {
             id_ex: { pipes::IdPipe::default() },
             ex_mem: { pipes::ExPipe::default() },
             mem_wb: { pipes::MemPipe::default() },
+            wb: { pipes::WbPipe::default() },
             is_hazard: false,
             cur_addr: 0x00000000,
             cur_line: 0,
@@ -49,7 +51,11 @@ impl Processor {
     pub fn next(&mut self) {
         self.cur_addr = self.pc;
         self.pc += 4;
+        
 
+        let wb_tup = stage::wb_stage::next(&mut self.mem_wb, self.registers);
+        self.wb = wb_tup.0;
+        self.registers = wb_tup.1;
         let mem_tup = stage::mem_stage::next(&mut self.ex_mem, self.memory);
         self.mem_wb = mem_tup.0;
         self.memory = mem_tup.1;
@@ -121,5 +127,19 @@ mod tests {
         assert_eq!(proc.id_ex.ctr_unit.mem_write, sample.mem_write);
         assert_eq!(proc.id_ex.ctr_unit.alu_src, sample.alu_src);
         assert_eq!(proc.id_ex.ctr_unit.reg_write, sample.reg_write);
+    }
+    #[test]
+    fn stage_id_datas() {
+        let mut proc = Processor::new();
+        let mut wtr = vec![];
+        wtr.write_u32::<NativeEndian>(0x02114020).unwrap();
+        proc.add_instruction(Block { data: wtr });
+        proc.next();
+        let test: u32 = 0x02114020;
+        let sample = units::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
+
+        assert_eq!(proc.id_ex.data_a, 0x0);
+        assert_eq!(proc.id_ex.data_b, 0x0);
+        
     }
 }

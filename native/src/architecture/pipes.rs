@@ -124,3 +124,12 @@ impl Default for MemPipe {
         }
     }
 }
+
+pub struct WbPipe {
+    pub ran: u32,
+}
+impl Default for WbPipe {
+    fn default() -> WbPipe {
+        WbPipe { ran: 0x00000000 }
+    }
+}
