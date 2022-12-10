@@ -21,3 +21,18 @@ byteorder = "1.4.3"
 lazy_static = "1.4.0"
 regex = "1.7.0"
 parking_lot = "0.12.1"
+cfg-if = "1.0.0"
+lockfree = "0.5.1"
+
+[dependencies.windows]
+version = "0.43.0"
+features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Kernel",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+]

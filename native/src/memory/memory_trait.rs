@@ -1,4 +1,3 @@
-use crate::memory::slowmem::SlowMem;
 use crate::memory::{EndianMode, Segment};
 
 pub trait Memory {
@@ -16,5 +15,18 @@ pub trait Memory {
 }
 
 pub fn create_memory(endian: EndianMode, segments: &[Segment]) -> Box<dyn Memory> {
-    SlowMem::new(endian, segments)
+    use super::slowmem::SlowMem;
+
+    cfg_if::cfg_if! {
+        if #[cfg(test)] {
+            SlowMem::new(endian, segments)
+        }
+        else if #[cfg(all(windows, target_pointer_width = "64"))] {
+            super::fastmem_windows::FastMemWindows::try_new(endian, segments)
+                .map(|x| -> Box<dyn Memory> { x })
+                .unwrap_or_else(|| SlowMem::new(endian, segments))
+        } else {
+            SlowMem::new(endian, segments)
+        }
+    }
 }
