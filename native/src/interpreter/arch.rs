@@ -97,6 +97,7 @@ impl Interpreter {
                 let addr = (pc & 0xf000_0000) | ((x.addr & 0x3ff_ffff) << 2);
                 pc = addr;
             }
+            _ => todo!()
         }
 
         self.set_pc(pc);

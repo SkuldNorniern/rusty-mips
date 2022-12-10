@@ -47,18 +47,40 @@ pub struct TypeJ {
 pub enum Instruction {
     // R format
     add(TypeR),
+    addu(TypeR),
     and(TypeR),
+    jr(TypeR),
+    nor(TypeR),
     or(TypeR),
-    sub(TypeR),
     slt(TypeR),
+    sltu(TypeR),
+    sll(TypeR),
+    srl(TypeR),
+    sub(TypeR),
+    subu(TypeR),
 
     // I format
-    lw(TypeI),
-    sw(TypeI),
+    addi(TypeI),
+    addiu(TypeI),
+    andi(TypeI),
     beq(TypeI),
+    bne(TypeI),
+    lbu(TypeI),
+    lhu(TypeI),
+    ll(TypeI),
+    lui(TypeI),
+    lw(TypeI),
+    ori(TypeI),
+    slti(TypeI),
+    sltiu(TypeI),
+    sb(TypeI),
+    sc(TypeI),
+    sh(TypeI),
+    sw(TypeI),
 
     // J format
     j(TypeJ),
+    jal(TypeJ),
 }
 
 fn decode_type_r(instruction: u32) -> Result<Instruction, InterpreterError> {
@@ -84,10 +106,17 @@ fn decode_type_r(instruction: u32) -> Result<Instruction, InterpreterError> {
 
     Ok(match funct {
         0x20 => add(x),
+        0x21 => addu(x),
         0x24 => and(x),
+        0x08 => jr(x),
+        0x27 => nor(x),
         0x25 => or(x),
-        0x22 => sub(x),
         0x2a => slt(x),
+        0x2b => sltu(x),
+        0x00 => sll(x),
+        0x02 => srl(x),
+        0x22 => sub(x),
+        0x23 => subu(x),
         _ => UnknownFunctSnafu { funct }.fail()?,
     })
 }
@@ -106,9 +135,23 @@ fn decode_i(instruction: u32, opcode: u32) -> Result<Instruction, InterpreterErr
     };
 
     Ok(match opcode {
+        0x08 => addi(x),
+        0x09 => addiu(x),
+        0x0c => andi(x),
+        0x04 => beq(x),
+        0x05 => bne(x),
+        0x24 => lbu(x),
+        0x25 => lhu(x),
+        0x30 => ll(x),
+        0x0f => lui(x),
         0x23 => lw(x),
+        0x0d => ori(x),
+        0x0a => slti(x),
+        0x0b => sltiu(x),
+        0x28 => sb(x),
+        0x38 => sc(x),
+        0x29 => sh(x),
         0x2b => sw(x),
-        0x4 => beq(x),
         _ => {
             return Err(UnknownOpcodeSnafu {
                 opcode: opcode as u8,
@@ -118,17 +161,23 @@ fn decode_i(instruction: u32, opcode: u32) -> Result<Instruction, InterpreterErr
     })
 }
 
-fn decode_j(instruction: u32) -> Result<Instruction, InterpreterError> {
+fn decode_j(instruction: u32, opcode: u32) -> Result<Instruction, InterpreterError> {
     use Instruction::*;
 
-    debug_assert!(
-        (instruction & 0xfc00_0000) >> 26 == 0x2,
-        "only instruction `J` is accepted"
-    );
-
-    Ok(j(TypeJ {
+    let x = TypeJ {
         addr: instruction & 0x3ff_ffff,
-    }))
+    };
+
+    Ok(match opcode {
+        0x2 => j(x),
+        0x3 => jal(x),
+        _ => {
+            return Err(UnknownOpcodeSnafu {
+                opcode: opcode as u8,
+            }
+            .build())
+        }
+    })
 }
 
 pub fn decode(instruction: u32) -> Result<Instruction, InterpreterError> {
@@ -136,11 +185,8 @@ pub fn decode(instruction: u32) -> Result<Instruction, InterpreterError> {
 
     if opcode == 0 {
         decode_type_r(instruction)
-    } else if opcode == 0x2 {
-        decode_j(instruction)
-    } else if opcode == 0x3 {
-        todo!()
-        //decode_jal(instruction)
+    } else if opcode == 2 || opcode == 3 {
+        decode_j(instruction, opcode)
     } else {
         decode_i(instruction, opcode)
     }
