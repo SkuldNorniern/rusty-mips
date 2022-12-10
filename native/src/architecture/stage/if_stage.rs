@@ -9,7 +9,7 @@ pub fn if_next(_inst: u32, _is_hazard: bool, _cur_addr: u32) -> pipes::IfPipe {
     } else {
         if_id.inst = _inst;
     }
-    if_id.npc = _cur_addr+4;
+    if_id.npc = _cur_addr + 4;
 
     if_id
 }

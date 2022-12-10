@@ -1,5 +1,5 @@
-use std::ptr::NonNull;
 use crate::memory::{EndianMode, Segment};
+use std::ptr::NonNull;
 
 pub trait Memory {
     fn endian(&self) -> EndianMode;

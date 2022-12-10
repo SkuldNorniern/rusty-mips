@@ -1,8 +1,8 @@
 use crate::architecture::pipes;
 
-pub fn next(_ex_mem: &mut pipes::ExPipe, _lmd: u32 ) -> (pipes::MemPipe, (u32,u32,bool)) {
+pub fn next(_ex_mem: &mut pipes::ExPipe, _lmd: u32) -> (pipes::MemPipe, (u32, u32, bool)) {
     let mut mem_wb = pipes::MemPipe::default();
-    let mut mem_data = (0,0,false);
+    let mut mem_data = (0, 0, false);
     mem_wb.ran = _ex_mem.ran;
 
     mem_wb.ctr_unit.mem_read = _ex_mem.ctr_unit.mem_read;
@@ -13,7 +13,7 @@ pub fn next(_ex_mem: &mut pipes::ExPipe, _lmd: u32 ) -> (pipes::MemPipe, (u32,u3
     }
 
     if _ex_mem.ctr_unit.mem_write == 1 {
-        mem_data= ((_ex_mem.alu_out / 4), _ex_mem.data_b, true);
+        mem_data = ((_ex_mem.alu_out / 4), _ex_mem.data_b, true);
     }
 
     mem_wb.alu_out = _ex_mem.alu_out;

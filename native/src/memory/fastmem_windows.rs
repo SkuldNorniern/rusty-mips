@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use lockfree::map::Map;
 use std::alloc::Layout;
 use std::ffi::c_void;
-use std::ptr::{NonNull, null_mut};
+use std::ptr::{null_mut, NonNull};
 use std::sync::atomic::{AtomicIsize, Ordering};
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{

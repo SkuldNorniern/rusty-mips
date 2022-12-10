@@ -5,6 +5,7 @@ use lockfree::map::Map;
 use std::alloc::{alloc_zeroed, Layout};
 use std::mem::{size_of, zeroed};
 use std::ptr::null_mut;
+use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 lazy_static! {
