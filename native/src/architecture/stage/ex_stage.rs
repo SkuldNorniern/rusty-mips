@@ -13,26 +13,26 @@ pub fn next(_id_ex: &mut pipes::IdPipe) -> pipes::ExPipe {
 
     ex_mem.branch_tgt = _id_ex.npc + (_id_ex.imm << 2);
 
-    let mut alu_A: u32 = 0;
-    let mut alu_B: u32 = 0;
+    let mut alu_a: u32 = 0;
+    let mut alu_b: u32 = 0;
     if _id_ex.ctr_unit.alu_src == 0 {
-        alu_B = _id_ex.imm;
+        alu_b = _id_ex.imm;
     }
 
-    if alu_A == alu_B {
+    if alu_a == alu_b {
         ex_mem.zero = 1;
     } else {
         ex_mem.zero = 0;
     }
 
     if _id_ex.ctr_unit.alu_op == 0 {
-        ex_mem.alu_out = alu_A + alu_B;
+        ex_mem.alu_out = alu_a + alu_b;
     } else if _id_ex.ctr_unit.alu_op == 1 {
-        ex_mem.alu_out = alu_A - alu_B;
+        ex_mem.alu_out = alu_a - alu_b;
     } else if _id_ex.ctr_unit.alu_op == 2 {
         let funct = _id_ex.imm & 0x0000003F;
         let shamt = _id_ex.imm & 0x000007C0;
-        ex_mem.alu_out = function_unit::funct_unit(funct, alu_A, alu_B, shamt);
+        ex_mem.alu_out = function_unit::funct_unit(funct, alu_a, alu_b, shamt);
     }
     ex_mem.data_b = 0;
 

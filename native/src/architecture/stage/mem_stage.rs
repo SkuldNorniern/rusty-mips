@@ -1,26 +1,23 @@
 use crate::architecture::pipes;
 
-pub fn next(
-    _ex_mem: &mut pipes::ExPipe,
-    _data_list: [u32; 65536],
-) -> (pipes::MemPipe, [u32; 65536]) {
+pub fn next(_ex_mem: &mut pipes::ExPipe, _lmd: u32 ) -> (pipes::MemPipe, (u32,u32,bool)) {
     let mut mem_wb = pipes::MemPipe::default();
-    let mut data_list = _data_list;
+    let mut mem_data = (0,0,false);
     mem_wb.ran = _ex_mem.ran;
 
     mem_wb.ctr_unit.mem_read = _ex_mem.ctr_unit.mem_read;
     mem_wb.ctr_unit.reg_write = _ex_mem.ctr_unit.reg_write;
 
     if _ex_mem.ctr_unit.mem_read == 1 {
-        mem_wb.lmd = _data_list[(_ex_mem.alu_out / 4) as usize];
+        mem_wb.lmd = _lmd;
     }
 
     if _ex_mem.ctr_unit.mem_write == 1 {
-        data_list[(_ex_mem.alu_out / 4) as usize] = _ex_mem.data_b;
+        mem_data= ((_ex_mem.alu_out / 4), _ex_mem.data_b, true);
     }
 
     mem_wb.alu_out = _ex_mem.alu_out;
     mem_wb.rd = _ex_mem.rd;
 
-    (mem_wb, data_list)
+    (mem_wb, mem_data)
 }

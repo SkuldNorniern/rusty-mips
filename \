@@ -1,2 +1,0 @@
-pub fn funct_unit(_funct: u32) -> pipes::CtrUnit {
-match opcode {
