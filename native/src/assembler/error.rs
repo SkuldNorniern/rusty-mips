@@ -1,47 +1,57 @@
+use snafu::prelude::*;
+use snafu::Backtrace;
 use std::ops::RangeInclusive;
-use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub(super)))]
 pub enum AssemblerError {
-    #[error("unexpected trailing token `{0}`")]
-    TrailingToken(String),
+    #[snafu(display("unexpected trailing token `{token}`"))]
+    TrailingToken { token: String, backtrace: Backtrace },
 
-    #[error("invalid token `{0}`")]
-    InvalidToken(String),
+    #[snafu(display("invalid token `{token}`"))]
+    InvalidToken { token: String, backtrace: Backtrace },
 
-    #[error("required argument not found")]
-    RequiredArgNotFound,
+    #[snafu(display("required argument not found"))]
+    RequiredArgNotFound { backtrace: Backtrace },
 
-    #[error("segment declaration required for token `{0}`")]
-    SegmentRequired(String),
+    #[snafu(display("segment declaration required for line `{line}`"))]
+    SegmentRequired { line: String, backtrace: Backtrace },
 
-    #[error("base address `{0}` out of expected range `{1:?}`")]
-    BaseAddressOutOfRange(u32, RangeInclusive<u32>),
+    #[snafu(display("base address `{addr}` out of expected range `{range:?}`"))]
+    BaseAddressOutOfRange {
+        addr: u32,
+        range: RangeInclusive<u32>,
+        backtrace: Backtrace,
+    },
 
-    #[error("unknown instruction `{0}")]
-    UnknownInstruction(String),
+    #[snafu(display("unknown instruction `{ins}`"))]
+    UnknownInstruction { ins: String, backtrace: Backtrace },
 
-    #[error("invalid register name `{0}")]
-    InvalidRegisterName(String),
+    #[snafu(display("invalid register name `{reg}`"))]
+    InvalidRegisterName { reg: String, backtrace: Backtrace },
 
-    #[error("invalid number of operands in line `{0}`")]
-    InvalidNumberOfOperands(String),
+    #[snafu(display("invalid number of operands in line `{line}`"))]
+    InvalidNumberOfOperands { line: String, backtrace: Backtrace },
 
-    #[error("segment address overlaps")]
-    SegmentOverlap,
+    #[snafu(display("segment address overlaps"))]
+    SegmentOverlap { backtrace: Backtrace },
 
-    #[error("offset {0} is too large to encode")]
-    OffsetTooLarge(i64),
+    #[snafu(display("offset {offset} is too large to encode"))]
+    OffsetTooLarge { offset: i64, backtrace: Backtrace },
 
-    #[error("branch offset {0} is unaligned")]
-    BranchOffsetUnaligned(i64),
+    #[snafu(display("branch offset {offset} is unaligned"))]
+    BranchOffsetUnaligned { offset: i64, backtrace: Backtrace },
 
-    #[error("jump target 0x{target:08x} is too far to encode from pc=0x{pc:08x}")]
-    JumpTooFar { target: u32, pc: u32 },
+    #[snafu(display("jump target 0x{target:08x} is too far to encode from pc=0x{pc:08x}"))]
+    JumpTooFar {
+        target: u32,
+        pc: u32,
+        backtrace: Backtrace,
+    },
 
-    #[error("jump target {0} is unaligned")]
-    JumpTargetUnaligned(u32),
+    #[snafu(display("jump target 0x{target:08x} is unaligned"))]
+    JumpTargetUnaligned { target: u32, backtrace: Backtrace },
 
-    #[error("label `{0}` was not found")]
-    LabelNotFound(String),
+    #[snafu(display("label `{label}` was not found"))]
+    LabelNotFound { label: String, backtrace: Backtrace },
 }

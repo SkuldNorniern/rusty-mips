@@ -1,5 +1,5 @@
 use crate::component::RegisterName;
-use crate::interpreter::error::InterpreterError;
+use crate::interpreter::error::{InterpreterError, UnknownFunctSnafu, UnknownOpcodeSnafu};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct TypeR {
@@ -24,7 +24,7 @@ impl Default for TypeR {
 pub struct TypeI {
     pub rs: RegisterName,
     pub rt: RegisterName,
-    pub imm: u16
+    pub imm: u16,
 }
 
 impl Default for TypeI {
@@ -62,7 +62,10 @@ pub enum Instruction {
 }
 
 fn decode_type_r(instruction: u32) -> Result<Instruction, InterpreterError> {
-    debug_assert!(instruction & 0xfc00_0000 == 0, "R-type instruction must have opcode=0");
+    debug_assert!(
+        instruction & 0xfc00_0000 == 0,
+        "R-type instruction must have opcode=0"
+    );
 
     use Instruction::*;
 
@@ -85,7 +88,7 @@ fn decode_type_r(instruction: u32) -> Result<Instruction, InterpreterError> {
         0x25 => or(x),
         0x22 => sub(x),
         0x2a => slt(x),
-        _ => return Err(InterpreterError::UnknownFunct(funct)),
+        _ => UnknownFunctSnafu { funct }.fail()?,
     })
 }
 
@@ -105,17 +108,25 @@ fn decode_i(instruction: u32, opcode: u32) -> Result<Instruction, InterpreterErr
     Ok(match opcode {
         0x23 => lw(x),
         0x2b => sw(x),
-        _ => return Err(InterpreterError::UnknownOpcode(opcode as u8)),
+        _ => {
+            return Err(UnknownOpcodeSnafu {
+                opcode: opcode as u8,
+            }
+            .build())
+        }
     })
 }
 
 fn decode_j(instruction: u32) -> Result<Instruction, InterpreterError> {
     use Instruction::*;
 
-    debug_assert!((instruction & 0xfc00_0000) >> 26 == 0x2, "only instruction `J` is accepted");
+    debug_assert!(
+        (instruction & 0xfc00_0000) >> 26 == 0x2,
+        "only instruction `J` is accepted"
+    );
 
     Ok(j(TypeJ {
-        addr: instruction & 0x3ff_ffff
+        addr: instruction & 0x3ff_ffff,
     }))
 }
 

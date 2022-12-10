@@ -1,6 +1,6 @@
 use crate::component::RegisterName;
 use crate::interpreter::decode::{decode, Instruction};
-use crate::interpreter::error::InterpreterError;
+use crate::interpreter::error::{ArithmeticOverflowSnafu, InterpreterError};
 use crate::memory::Memory;
 
 pub struct Interpreter {
@@ -12,14 +12,11 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new(mem: Box<dyn Memory>) -> Self {
         let mut reg = [0; 32];
-        reg[0]  = 0x00400000;  // pc
-        reg[28] = 0x10008000;  // gp
-        reg[29] = 0x7ffffe40;  // sp
+        reg[0] = 0x00400000; // pc
+        reg[28] = 0x10008000; // gp
+        reg[29] = 0x7ffffe40; // sp
 
-        Interpreter {
-            reg,
-            mem
-        }
+        Interpreter { reg, mem }
     }
 
     fn pc(&self) -> u32 {
@@ -58,12 +55,10 @@ impl Interpreter {
         let mut pc = self.pc() + 4;
 
         match ins {
-            add(x) => {
-                match i32::checked_add(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
-                    Some(val) => self.set_reg(x.rd, val as u32),
-                    None => return Err(InterpreterError::ArithmeticOverflow)
-                }
-            }
+            add(x) => match i32::checked_add(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
+                Some(val) => self.set_reg(x.rd, val as u32),
+                None => ArithmeticOverflowSnafu {}.fail()?,
+            },
             and(x) => {
                 let val = self.reg(x.rs) & self.reg(x.rt);
                 self.set_reg(x.rd, val);
@@ -72,12 +67,10 @@ impl Interpreter {
                 let val = self.reg(x.rs) | self.reg(x.rt);
                 self.set_reg(x.rd, val);
             }
-            sub(x) => {
-                match i32::checked_sub(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
-                    Some(val) => self.set_reg(x.rd, val as u32),
-                    None => return Err(InterpreterError::ArithmeticOverflow)
-                }
-            }
+            sub(x) => match i32::checked_sub(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
+                Some(val) => self.set_reg(x.rd, val as u32),
+                None => ArithmeticOverflowSnafu {}.fail()?,
+            },
             slt(x) => {
                 let cond = (self.reg(x.rs) as i32) < (self.reg(x.rt) as i32);
                 self.set_reg(x.rd, cond.into());
@@ -113,9 +106,9 @@ impl Interpreter {
 
 #[cfg(test)]
 mod test {
-    use crate::assembler::{assemble, AssemblerError};
-    use crate::memory::{create_memory, EndianMode};
     use super::*;
+    use crate::assembler::{assemble};
+    use crate::memory::{create_memory, EndianMode};
 
     const TEXT_ADDR: u32 = 0x00400000;
 
@@ -142,13 +135,14 @@ mod test {
 
         state.reg[19] = i32::MAX as u32;
         state.reg[20] = 1;
-        state.step().unwrap_err();  //TODO: Should I check if it is InterpreterError::ArithmeticOverflow?
+        state.step().unwrap_err(); //TODO: Should I check if it is InterpreterError::ArithmeticOverflow?
         assert_eq!(state.reg[18], 3);
     }
 
     #[test]
     fn sub() {
-        let mut state = init_state(".text\nsub $18, $16, $17\nsub $18, $16, $17\nsub $18, $16, $17");
+        let mut state =
+            init_state(".text\nsub $18, $16, $17\nsub $18, $16, $17\nsub $18, $16, $17");
         state.reg[16] = 3;
         state.reg[17] = 2;
         state.step().unwrap();
@@ -161,7 +155,7 @@ mod test {
 
         state.reg[16] = i32::MIN as u32;
         state.reg[17] = 1;
-        state.step().unwrap_err();  //TODO: Should I check if it is InterpreterError::ArithmeticOverflow?
+        state.step().unwrap_err(); //TODO: Should I check if it is InterpreterError::ArithmeticOverflow?
         assert_eq!(state.reg[18], -1_i32 as u32);
     }
 
@@ -178,7 +172,9 @@ mod test {
 
     #[test]
     fn slt() {
-        let mut state = init_state(".text\nslt $18, $16, $17\nslt $18, $16, $17\nslt $18, $16, $17\nslt $18, $16, $17");
+        let mut state = init_state(
+            ".text\nslt $18, $16, $17\nslt $18, $16, $17\nslt $18, $16, $17\nslt $18, $16, $17",
+        );
         state.reg[16] = 1;
         state.reg[17] = 2;
         state.step().unwrap();

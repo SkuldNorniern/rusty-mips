@@ -1,9 +1,9 @@
 mod architecture;
 mod assembler;
 mod component;
+mod interpreter;
 mod memory;
 mod webapi;
-mod interpreter;
 
 use neon::prelude::*;
 

@@ -12,10 +12,8 @@ fn init(mut cx: FunctionContext) -> JsResult<JsNumber> {
             .global()
             .get(&mut cx, "console")
             .and_then(|x: Handle<JsObject>| x.get(&mut cx, "log"))
-            .and_then(|x: Handle<JsFunction>| {
-                x.call_with(&mut cx).arg(cx.string(msg)).apply(&mut cx)
-            })
-            .map(|x: Handle<JsUndefined>| ());
+            .and_then(|x: Handle<JsFunction>| x.call_with(&cx).arg(cx.string(msg)).apply(&mut cx))
+            .map(|_: Handle<JsUndefined>| ());
     }
     *guard = Some(State::new());
     drop(guard);

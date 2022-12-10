@@ -1,6 +1,6 @@
 use super::state::State;
 use neon::prelude::*;
-use parking_lot::{MappedMutexGuard, MutexGuard, RawMutex};
+use parking_lot::{MappedMutexGuard, MutexGuard};
 
 pub fn take_state(cx: &mut FunctionContext) -> NeonResult<MappedMutexGuard<'static, State>> {
     let guard = super::GLOBAL_STATE.lock();

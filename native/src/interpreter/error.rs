@@ -1,14 +1,15 @@
-use std::ops::RangeInclusive;
-use thiserror::Error;
+use snafu::prelude::*;
+use snafu::Backtrace;
 
-#[derive(Error, Debug)]
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub(super)))]
 pub enum InterpreterError {
-    #[error("unknown opcode 0x{0:02x}")]
-    UnknownOpcode(u8),
+    #[snafu(display("unknown opcode 0x{opcode:02x}"))]
+    UnknownOpcode { opcode: u8, backtrace: Backtrace },
 
-    #[error("unknown funct field 0x{0:02x}")]
-    UnknownFunct(u8),
+    #[snafu(display("unknown funct field 0x{funct:02x}"))]
+    UnknownFunct { funct: u8, backtrace: Backtrace },
 
-    #[error("overflowed arithmetic operation")]
-    ArithmeticOverflow
+    #[snafu(display("overflowed arithmetic operation"))]
+    ArithmeticOverflow { backtrace: Backtrace },
 }

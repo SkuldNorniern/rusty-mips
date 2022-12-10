@@ -1,4 +1,4 @@
-use super::error::AssemblerError;
+use super::error::*;
 use super::instruction::{FormatI, FormatR, Instruction};
 use crate::assembler::instruction::FormatJ;
 use crate::component::RegisterName;
@@ -41,12 +41,15 @@ fn try_parse_signed(text: &str) -> Option<i64> {
 fn try_parse_reg(name: &str) -> Result<RegisterName, AssemblerError> {
     name.strip_prefix('$')
         .and_then(RegisterName::try_from_name)
-        .ok_or_else(|| AssemblerError::InvalidRegisterName(name.into()))
+        .ok_or_else(|| InvalidRegisterNameSnafu { reg: name }.build())
 }
 
 fn bail_trailing_token<'a>(mut iter: impl Iterator<Item = &'a str>) -> Result<(), AssemblerError> {
     match iter.next() {
-        Some(x) => Err(AssemblerError::TrailingToken(x.into())),
+        Some(x) => Err(TrailingTokenSnafu {
+            token: x.to_owned(),
+        }
+        .build()),
         None => Ok(()),
     }
 }
@@ -56,13 +59,13 @@ fn try_parse_ins_3arg(args: &str, line: &str) -> Result<FormatR, AssemblerError>
 
     let rd = args
         .next()
-        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))?;
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
     let rs = args
         .next()
-        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))?;
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
     let rt = args
         .next()
-        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))?;
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
 
     bail_trailing_token(args)?;
 
@@ -81,16 +84,20 @@ fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerErro
 
     let caps = match RE.captures(args) {
         Some(x) => x,
-        None => return Err(AssemblerError::InvalidNumberOfOperands(line.into())),
+        None => InvalidNumberOfOperandsSnafu { line }.fail()?,
     };
 
-    let imm =
-        try_parse_signed(&caps[2]).ok_or_else(|| AssemblerError::InvalidToken(caps[2].into()))?;
+    let imm = try_parse_signed(&caps[2]).ok_or_else(|| {
+        InvalidTokenSnafu {
+            token: caps[2].to_owned(),
+        }
+        .build()
+    })?;
     let rs = try_parse_reg(&caps[3])?;
     let rt = try_parse_reg(&caps[1])?;
 
     if TryInto::<i16>::try_into(imm).is_err() {
-        return Err(AssemblerError::OffsetTooLarge(imm));
+        OffsetTooLargeSnafu { offset: imm }.fail()?;
     }
 
     Ok(FormatI::new(rs, rt, imm as u16))
@@ -106,17 +113,17 @@ fn try_parse_ins_branch(
 
     let rs = args
         .next()
-        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
         .map(|x| x.trim())
         .and_then(try_parse_reg)?;
     let rt = args
         .next()
-        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
         .map(|x| x.trim())
         .and_then(try_parse_reg)?;
     let label = args
         .next()
-        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
         .map(|x| x.trim())?;
 
     bail_trailing_token(args)?;
@@ -128,19 +135,19 @@ fn try_parse_ins_branch(
         // parse as label
         map.get(label)
             .map(|x| *x as i64 - pc as i64 - 4)
-            .ok_or_else(|| AssemblerError::LabelNotFound(label.into()))?
+            .ok_or_else(|| LabelNotFoundSnafu { label }.build())?
     } else {
         // parse as label, but it's first pass; treat as 0
         0
     };
 
     if offset % 4 != 0 {
-        return Err(AssemblerError::BranchOffsetUnaligned(offset));
+        BranchOffsetUnalignedSnafu { offset }.fail()?;
     }
 
     let offset: i16 = (offset / 4)
         .try_into()
-        .map_err(|_| AssemblerError::OffsetTooLarge(offset))?;
+        .map_err(|_| OffsetTooLargeSnafu { offset }.build())?;
 
     Ok(FormatI::new(rs, rt, offset as u16))
 }
@@ -155,7 +162,7 @@ fn try_parse_ins_jump(
 
     let label = args
         .next()
-        .ok_or_else(|| AssemblerError::InvalidNumberOfOperands(line.into()))
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
         .map(|x| x.trim())?;
 
     bail_trailing_token(args)?;
@@ -166,7 +173,7 @@ fn try_parse_ins_jump(
     } else if let Some(map) = labels {
         // parse as label
         map.get(label)
-            .ok_or_else(|| AssemblerError::LabelNotFound(label.into()))
+            .ok_or_else(|| LabelNotFoundSnafu { label }.build())
             .map(|x| *x)?
     } else {
         // parse as label, but it's first pass; treat as 0
@@ -174,10 +181,10 @@ fn try_parse_ins_jump(
     };
 
     if target % 4 != 0 {
-        return Err(AssemblerError::JumpTargetUnaligned(target));
+        JumpTargetUnalignedSnafu { target }.fail()?;
     }
     if target & 0xF000_0000 != (pc + 4) & 0xF000_0000 {
-        return Err(AssemblerError::JumpTooFar { target, pc });
+        JumpTooFarSnafu { target, pc }.fail()?;
     }
 
     Ok(FormatJ::new((target / 4) & 0x03FF_FFFF))
@@ -205,7 +212,7 @@ fn try_parse_ins(
         "sw" => Instruction::Sw(try_parse_ins_memory(args, line)?),
         "beq" => Instruction::Beq(try_parse_ins_branch(args, line, pc, labels)?),
         "j" => Instruction::J(try_parse_ins_jump(args, line, pc, labels)?),
-        _ => return Err(AssemblerError::UnknownInstruction(mnemonic.into())),
+        _ => UnknownInstructionSnafu { ins: mnemonic }.fail()?,
     })
 }
 
@@ -280,31 +287,37 @@ fn parse(
 
             if let Some(x) = seg_type {
                 if !x.contains(&base_addr) {
-                    return Err(AssemblerError::BaseAddressOutOfRange(base_addr, x));
+                    return Err(BaseAddressOutOfRangeSnafu {
+                        addr: base_addr,
+                        range: x,
+                    }
+                    .build());
                 }
             }
 
             curr_seg = Some(Segment::new(base_addr, endian));
             bail_trailing_token(tokens)?;
         } else if first_token == ".globl" {
-            let label = tokens.next().ok_or(AssemblerError::RequiredArgNotFound)?;
+            let label = tokens
+                .next()
+                .ok_or_else(|| RequiredArgNotFoundSnafu {}.build())?;
 
             if curr_seg.is_none() {
-                return Err(AssemblerError::SegmentRequired(line.into()));
+                SegmentRequiredSnafu { line }.fail()?;
             }
 
             global_labels.insert(label.to_owned());
         } else if first_token == ".word" {
             let seg = curr_seg
                 .as_mut()
-                .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
+                .ok_or_else(|| SegmentRequiredSnafu { line }.build())?;
 
             let values = line
                 .strip_prefix(first_token)
                 .expect("line should start with first token")
                 .split(',')
                 .map(|x| {
-                    try_parse_signed(x.trim()).ok_or_else(|| AssemblerError::InvalidToken(x.into()))
+                    try_parse_signed(x.trim()).ok_or_else(|| InvalidTokenSnafu { token: x }.build())
                 });
 
             for num in values {
@@ -313,13 +326,13 @@ fn parse(
         } else if let Some(label) = first_token.strip_suffix(':') {
             let seg = curr_seg
                 .as_mut()
-                .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
+                .ok_or_else(|| SegmentRequiredSnafu { line }.build())?;
 
             seg.append_label(label);
         } else {
             let seg = curr_seg
                 .as_mut()
-                .ok_or_else(|| AssemblerError::SegmentRequired(line.into()))?;
+                .ok_or_else(|| SegmentRequiredSnafu { line }.build())?;
             let pc = seg.next_address();
             let ins = try_parse_ins(line, first_token, pc, labels)?;
 
@@ -359,7 +372,7 @@ pub fn assemble(endian: EndianMode, asm: &str) -> Result<Vec<Segment>, Assembler
             }
 
             if range_overlaps(a.address_range(), b.address_range()) {
-                return Err(AssemblerError::SegmentOverlap);
+                SegmentOverlapSnafu {}.fail()?;
             }
         }
     }
@@ -445,7 +458,7 @@ mod test {
         let code = ".text\nlw $7, 0x8000($4)";
         let result = assemble(*NE, code);
         assert!(result.is_err());
-        if let AssemblerError::OffsetTooLarge(_) = result.unwrap_err() {
+        if let AssemblerError::OffsetTooLarge { .. } = result.unwrap_err() {
             // ok
         } else {
             panic!("expected OffsetTooLarge error");

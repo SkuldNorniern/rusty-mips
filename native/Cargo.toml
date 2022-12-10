@@ -16,7 +16,7 @@ default-features = false
 features = ["napi-6"]
 
 [dependencies]
-thiserror = "1.0.37"
+snafu = { version="0.7.3", features=["backtraces"]}
 byteorder = "1.4.3"
 lazy_static = "1.4.0"
 regex = "1.7.0"
