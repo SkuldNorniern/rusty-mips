@@ -108,6 +108,7 @@ fn decode_i(instruction: u32, opcode: u32) -> Result<Instruction, InterpreterErr
     Ok(match opcode {
         0x23 => lw(x),
         0x2b => sw(x),
+        0x4 => beq(x),
         _ => {
             return Err(UnknownOpcodeSnafu {
                 opcode: opcode as u8,

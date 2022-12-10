@@ -221,4 +221,19 @@ mod test {
         state.step().unwrap();
         assert_eq!(state.pc(), 0x1234);
     }
+
+    #[test]
+    fn beq() {
+        let mut state = init_state(".text\nstart:\nadd $16, $16, $17\nbeq $16, $0, fin\nj start\nfin:\nj 0x00001234");
+        state.reg[16] = 3;
+        state.reg[17] = -1_i32 as u32;
+
+        let expected_pc = [0, 4, 8, 0, 4, 8, 0, 4, 12];
+
+        for pc in expected_pc {
+            assert_eq!(pc + TEXT_ADDR, state.pc());
+            state.step().unwrap();
+        }
+        assert_eq!(state.pc(), 0x1234);
+    }
 }
