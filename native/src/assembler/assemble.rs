@@ -5,6 +5,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
+use std::mem::swap;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
@@ -19,7 +20,7 @@ Syntax is like SPIM simulator.
 Note: https://phoenix.goucher.edu/~kelliher/f2009/cs220/mipsir.html
  */
 
-fn try_parse_unsigned(text: &str) -> Option<u64> {
+fn try_parse_unsigned(text: &str) -> Result<u64, AssemblerError> {
     let text = text.to_ascii_lowercase();
 
     if let Some(x) = text.strip_prefix("0x") {
@@ -31,6 +32,7 @@ fn try_parse_unsigned(text: &str) -> Option<u64> {
     } else {
         u64::from_str(&text).ok()
     }
+    .ok_or_else(|| InvalidTokenSnafu { token: text }.build())
 }
 
 fn try_parse_signed(text: &str) -> Result<i64, AssemblerError> {
@@ -64,20 +66,26 @@ fn bail_trailing_token<'a>(mut iter: impl Iterator<Item = &'a str>) -> Result<()
     }
 }
 
-fn try_parse_ins_3arg(args: &str, line: &str) -> Result<TypeR, AssemblerError> {
+fn try_parse_ins_3arg(args: &str, line: &str, shift_order: bool) -> Result<TypeR, AssemblerError> {
     let mut args = args.split(',');
 
     let rd = args
         .next()
         .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
-    let rs = args
+    let mut rs = args
         .next()
         .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
-    let rt = args
+    let mut rt = args
         .next()
         .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
 
     bail_trailing_token(args)?;
+
+    if shift_order {
+        // Shift instructions use $d, $t, $s order,
+        // where normal ones use $d, $s, $t order.
+        swap(&mut rs, &mut rt);
+    }
 
     Ok(TypeR {
         rs: try_parse_reg(rs.trim())?,
@@ -119,7 +127,7 @@ fn try_parse_ins_imm(args: &str, line: &str, sign_ext: bool) -> Result<TypeI, As
     })
 }
 
-fn try_parse_ins_imm_1arg(args: &str, line: &str, sign_ext: bool) -> Result<TypeI, AssemblerError> {
+fn try_parse_ins_lui(args: &str, line: &str, sign_ext: bool) -> Result<TypeI, AssemblerError> {
     let mut args = args.split(',');
 
     let rt = args
@@ -145,6 +153,34 @@ fn try_parse_ins_imm_1arg(args: &str, line: &str, sign_ext: bool) -> Result<Type
         rs: RegisterName::new(0),
         rt: try_parse_reg(rt.trim())?,
         imm: imm as u16,
+    })
+}
+
+fn try_parse_ins_shift(args: &str, line: &str) -> Result<TypeR, AssemblerError> {
+    let mut args = args.split(',');
+
+    let rd = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
+    let rt = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
+    let imm = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
+        .and_then(|x| try_parse_unsigned(x.trim()))?;
+
+    bail_trailing_token(args)?;
+
+    if 32 <= imm {
+        return ImmediateTooLargeSnafu { imm: imm as i64 }.fail();
+    }
+
+    Ok(TypeR {
+        rs: RegisterName::new(0),
+        rt: try_parse_reg(rt.trim())?,
+        rd: try_parse_reg(rd.trim())?,
+        shamt: imm as u8,
     })
 }
 
@@ -241,7 +277,7 @@ fn try_parse_ins_jump(
 
     bail_trailing_token(args)?;
 
-    let target = if let Some(x) = try_parse_unsigned(label) {
+    let target = if let Ok(x) = try_parse_unsigned(label) {
         // parse as target
         x as u32
     } else if let Some(map) = labels {
@@ -281,28 +317,28 @@ fn try_parse_ins(
         .trim_start();
 
     Ok(match mnemonic {
-        "add" => add(try_parse_ins_3arg(args, line)?),
-        "addu" => addu(try_parse_ins_3arg(args, line)?),
-        "and" => and(try_parse_ins_3arg(args, line)?),
-        "nor" => nor(try_parse_ins_3arg(args, line)?),
-        "or" => or(try_parse_ins_3arg(args, line)?),
-        "slt" => slt(try_parse_ins_3arg(args, line)?),
-        "sltu" => sltu(try_parse_ins_3arg(args, line)?),
-        "sub" => sub(try_parse_ins_3arg(args, line)?),
-        "subu" => subu(try_parse_ins_3arg(args, line)?),
-        "xor" => xor(try_parse_ins_3arg(args, line)?),
+        "add" => add(try_parse_ins_3arg(args, line, false)?),
+        "addu" => addu(try_parse_ins_3arg(args, line, false)?),
+        "and" => and(try_parse_ins_3arg(args, line, false)?),
+        "nor" => nor(try_parse_ins_3arg(args, line, false)?),
+        "or" => or(try_parse_ins_3arg(args, line, false)?),
+        "slt" => slt(try_parse_ins_3arg(args, line, false)?),
+        "sltu" => sltu(try_parse_ins_3arg(args, line, false)?),
+        "sub" => sub(try_parse_ins_3arg(args, line, false)?),
+        "subu" => subu(try_parse_ins_3arg(args, line, false)?),
+        "xor" => xor(try_parse_ins_3arg(args, line, false)?),
 
-        "sll" => sll(todo!()),
-        "sllv" => sllv(try_parse_ins_3arg(args, line)?),
-        "sra" => sra(todo!()),
-        "srav" => srav(try_parse_ins_3arg(args, line)?),
-        "srl" => srl(todo!()),
-        "srlv" => srlv(try_parse_ins_3arg(args, line)?),
+        "sll" => sll(try_parse_ins_shift(args, line)?),
+        "sllv" => sllv(try_parse_ins_3arg(args, line, true)?),
+        "sra" => sra(try_parse_ins_shift(args, line)?),
+        "srav" => srav(try_parse_ins_3arg(args, line, true)?),
+        "srl" => srl(try_parse_ins_shift(args, line)?),
+        "srlv" => srlv(try_parse_ins_3arg(args, line, true)?),
 
         "addi" => addi(try_parse_ins_imm(args, line, true)?),
         "addiu" => addiu(try_parse_ins_imm(args, line, true)?),
         "andi" => andi(try_parse_ins_imm(args, line, false)?),
-        "lui" => lui(try_parse_ins_imm_1arg(args, line, false)?),
+        "lui" => lui(try_parse_ins_lui(args, line, false)?),
         "ori" => ori(try_parse_ins_imm(args, line, false)?),
         "slti" => slti(try_parse_ins_imm(args, line, true)?),
         "sltiu" => sltiu(try_parse_ins_imm(args, line, false)?),
@@ -379,7 +415,7 @@ fn parse(
                 segs.push(x);
             }
 
-            let base_addr = match tokens.next().and_then(try_parse_unsigned) {
+            let base_addr = match tokens.next().and_then(|x| try_parse_unsigned(x).ok()) {
                 Some(x) => x as u32,
                 None => {
                     if first_token == ".text" {
@@ -673,5 +709,31 @@ mod test {
         } else {
             panic!("expected ImmediateTooLarge, got {:?}", err2);
         }
+    }
+
+    #[test]
+    fn assemble_shifts() {
+        let code = r"
+        .text
+        sll $v0, $v1, 0
+        sllv $s0, $s1, $16
+        sra $0, $16, 31
+        srav $0, $16, $s2
+        srl $v1, $s0, 0x3
+        srlv $s0, $s1, $0";
+
+        let segs = assemble(*NE, code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].data.len(), 24);
+        assert!(segs[0].labels().is_empty());
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x00031000);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x02118004);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x001007c3);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x02500007);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x001018c2);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x00118006);
     }
 }
