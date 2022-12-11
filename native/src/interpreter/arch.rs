@@ -150,19 +150,11 @@ impl Interpreter {
                 self.set_reg(x.rt, val);
             }
             slti(x) => {
-                let val = if (self.reg(x.rs) as i32) < (x.imm as i16 as i32) {
-                    1
-                } else {
-                    0
-                };
+                let val = ((self.reg(x.rs) as i32) < (x.imm as i16 as i32)).into();
                 self.set_reg(x.rt, val);
             }
             sltiu(x) => {
-                let val = if self.reg(x.rs) < (x.imm as u32) {
-                    1
-                } else {
-                    0
-                };
+                let val = (self.reg(x.rs) < (x.imm as u32)).into();
                 self.set_reg(x.rt, val);
             }
             xori(x) => {
@@ -260,7 +252,7 @@ impl Interpreter {
             jr(x) => {
                 pc = self.reg(x.rs);
             }
-            syscall(x) => {
+            syscall(_) => {
                 self.handle_syscall();
             }
             invalid(x) => {
