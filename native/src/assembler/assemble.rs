@@ -4,7 +4,7 @@ use crate::memory::{EndianMode, Segment};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
@@ -33,7 +33,7 @@ fn try_parse_unsigned(text: &str) -> Option<u64> {
     }
 }
 
-fn try_parse_signed(text: &str) -> Option<i64> {
+fn try_parse_signed(text: &str) -> Result<i64, AssemblerError> {
     let text = text.to_ascii_lowercase();
 
     if let Some(x) = text.strip_prefix("0x") {
@@ -45,6 +45,7 @@ fn try_parse_signed(text: &str) -> Option<i64> {
     } else {
         i64::from_str(&text).ok()
     }
+    .ok_or_else(|| InvalidTokenSnafu { token: text }.build())
 }
 
 fn try_parse_reg(name: &str) -> Result<RegisterName, AssemblerError> {
@@ -86,29 +87,62 @@ fn try_parse_ins_3arg(args: &str, line: &str) -> Result<TypeR, AssemblerError> {
     })
 }
 
-fn try_parse_ins_imm(args: &str, line: &str) -> Result<TypeI, AssemblerError> {
+fn try_parse_ins_imm(args: &str, line: &str, sign_ext: bool) -> Result<TypeI, AssemblerError> {
     let mut args = args.split(',');
 
+    let rt = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
     let rs = args
         .next()
         .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
+    let imm = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
+        .and_then(|x| try_parse_signed(x.trim()))?;
+
+    bail_trailing_token(args)?;
+
+    let interpreted = if sign_ext {
+        imm as i16 as i64
+    } else {
+        imm as u16 as u64 as i64
+    };
+    if interpreted != imm {
+        return Err(ImmediateTooLargeSnafu { imm }.build());
+    }
+
+    Ok(TypeI {
+        rs: try_parse_reg(rs.trim())?,
+        rt: try_parse_reg(rt.trim())?,
+        imm: imm as u16,
+    })
+}
+
+fn try_parse_ins_imm_1arg(args: &str, line: &str, sign_ext: bool) -> Result<TypeI, AssemblerError> {
+    let mut args = args.split(',');
+
     let rt = args
         .next()
         .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
     let imm = args
         .next()
         .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
-        .and_then(|x| try_parse_signed(x).ok_or_else(|| InvalidTokenSnafu { token: x }.build()))?;
+        .and_then(|x| try_parse_signed(x.trim()))?;
 
     bail_trailing_token(args)?;
 
-    let upper_part = (imm as u64) & (!0xffff);
-    if upper_part != 0 && upper_part != 0xffff_ffff_ffff_0000 {
+    let interpreted = if sign_ext {
+        imm as i16 as i64
+    } else {
+        imm as u16 as u64 as i64
+    };
+    if interpreted != imm {
         return Err(ImmediateTooLargeSnafu { imm }.build());
     }
 
     Ok(TypeI {
-        rs: try_parse_reg(rs.trim())?,
+        rs: RegisterName::new(0),
         rt: try_parse_reg(rt.trim())?,
         imm: imm as u16,
     })
@@ -124,12 +158,7 @@ fn try_parse_ins_memory(args: &str, line: &str) -> Result<TypeI, AssemblerError>
         None => InvalidNumberOfOperandsSnafu { line }.fail()?,
     };
 
-    let imm = try_parse_signed(&caps[2]).ok_or_else(|| {
-        InvalidTokenSnafu {
-            token: caps[2].to_owned(),
-        }
-        .build()
-    })?;
+    let imm = try_parse_signed(&caps[2])?;
     let rs = try_parse_reg(&caps[3])?;
     let rt = try_parse_reg(&caps[1])?;
 
@@ -169,7 +198,7 @@ fn try_parse_ins_branch(
 
     bail_trailing_token(args)?;
 
-    let offset = if let Some(x) = try_parse_signed(label) {
+    let offset = if let Ok(x) = try_parse_signed(label) {
         // parse as offset
         x
     } else if let Some(map) = labels {
@@ -270,14 +299,14 @@ fn try_parse_ins(
         "srl" => srl(todo!()),
         "srlv" => srlv(try_parse_ins_3arg(args, line)?),
 
-        "addi" => addi(todo!()),
-        "addiu" => addiu(todo!()),
-        "andi" => andi(todo!()),
-        "lui" => lui(todo!()),
-        "ori" => ori(todo!()),
-        "slti" => slti(todo!()),
-        "sltiu" => sltiu(todo!()),
-        "xori" => xori(todo!()),
+        "addi" => addi(try_parse_ins_imm(args, line, true)?),
+        "addiu" => addiu(try_parse_ins_imm(args, line, true)?),
+        "andi" => andi(try_parse_ins_imm(args, line, false)?),
+        "lui" => lui(try_parse_ins_imm_1arg(args, line, false)?),
+        "ori" => ori(try_parse_ins_imm(args, line, false)?),
+        "slti" => slti(try_parse_ins_imm(args, line, true)?),
+        "sltiu" => sltiu(try_parse_ins_imm(args, line, false)?),
+        "xori" => xori(try_parse_ins_imm(args, line, false)?),
 
         "beq" => beq(try_parse_ins_branch(args, line, pc, labels)?),
         "bgez" => bgez(todo!()),
@@ -403,9 +432,7 @@ fn parse(
                 .strip_prefix(first_token)
                 .expect("line should start with first token")
                 .split(',')
-                .map(|x| {
-                    try_parse_signed(x.trim()).ok_or_else(|| InvalidTokenSnafu { token: x }.build())
-                });
+                .map(|x| try_parse_signed(x.trim()));
 
             for num in values {
                 seg.append_u32(num? as u32);
@@ -597,5 +624,54 @@ mod test {
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10000001);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x00008820);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0810000a);
+    }
+
+    #[test]
+    fn assemble_imm() {
+        let code = r"
+        .text
+        addi $0, $0, 32767
+        addiu $0, $0, -32768
+        andi $s1, $s2, 0xffff
+        lui $v1, 0o177777
+        ori $6, $10, 1234
+        slti $0, $0, -1234
+        sltiu $0, $0, 0
+        xori $0, $0, 10101";
+
+        let segs = assemble(*NE, code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].data.len(), 32);
+        assert!(segs[0].labels().is_empty());
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x20007fff);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x24008000);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x3251ffff);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x3c03ffff);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x354604d2);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x2800fb2e);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x2c000000);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x38002775);
+    }
+
+    #[test]
+    fn assemble_imm_fails() {
+        let err1 = assemble(*NE, ".text\naddi $0, $0, 32768").expect_err("must result in error");
+
+        if let AssemblerError::ImmediateTooLarge { .. } = &err1 {
+            // ok
+        } else {
+            panic!("expected ImmediateTooLarge, got {:?}", err1);
+        }
+
+        let err2 = assemble(*NE, ".text\naddi $0, $0, -32769").expect_err("must result in error");
+
+        if let AssemblerError::ImmediateTooLarge { .. } = &err2 {
+            // ok
+        } else {
+            panic!("expected ImmediateTooLarge, got {:?}", err2);
+        }
     }
 }
