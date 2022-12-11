@@ -36,6 +36,9 @@ pub enum AssemblerError {
     #[snafu(display("segment address overlaps"))]
     SegmentOverlap { backtrace: Backtrace },
 
+    #[snafu(display("immediate {imm} is too large to encode"))]
+    ImmediateTooLarge { imm: i64, backtrace: Backtrace },
+
     #[snafu(display("offset {offset} is too large to encode"))]
     OffsetTooLarge { offset: i64, backtrace: Backtrace },
 

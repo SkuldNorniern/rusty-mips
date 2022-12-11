@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct RegisterName(u8);
 
 impl RegisterName {

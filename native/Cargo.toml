@@ -5,15 +5,11 @@ description = "Native module of rusty-mips, a simple mips simulator"
 authors = ["jsonmona", "SkuldNorniern"]
 license = ""
 edition = "2018"
+resolver = "2"
 exclude = ["index.node"]
 
 [lib]
 crate-type = ["cdylib"]
-
-[dependencies.neon]
-version = "1.0.0-alpha"
-default-features = false
-features = ["napi-6"]
 
 [dependencies]
 snafu = { version="0.7.3", features=["backtraces"]}
@@ -23,6 +19,11 @@ regex = "1.7.0"
 parking_lot = "0.12.1"
 cfg-if = "1.0.0"
 lockfree = "0.5.1"
+
+[dependencies.neon]
+version = "1.0.0-alpha"
+default-features = false
+features = ["napi-6"]
 
 [dependencies.windows]
 version = "0.43.0"
@@ -39,3 +40,6 @@ features = [
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[dev-dependencies]
+rayon = "1.6.1"

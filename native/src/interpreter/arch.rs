@@ -1,6 +1,7 @@
-use crate::component::RegisterName;
-use crate::interpreter::decode::{decode, Instruction};
-use crate::interpreter::error::{ArithmeticOverflowSnafu, InterpreterError};
+use crate::component::{Instruction, RegisterName};
+use crate::interpreter::error::{
+    ArithmeticOverflowSnafu, InterpreterError, InvalidInstructionSnafu,
+};
 use crate::memory::Memory;
 
 pub struct Interpreter {
@@ -42,10 +43,12 @@ impl Interpreter {
     }
 
     fn step(&mut self) -> Result<(), InterpreterError> {
-        let ins = decode(self.mem.read_u32(self.pc()))?;
+        let ins = Instruction::decode(self.mem.read_u32(self.pc()));
 
-        // `execute` is in its own separate module to prevent growing this file too big
-        // see execute.rs in this directory
+        if let Some(x) = ins.as_invalid() {
+            return InvalidInstructionSnafu { ins: x }.fail();
+        }
+
         self.execute(ins)
     }
 
@@ -94,10 +97,10 @@ impl Interpreter {
                 }
             }
             j(x) => {
-                let addr = (pc & 0xf000_0000) | ((x.addr & 0x3ff_ffff) << 2);
+                let addr = (pc & 0xf000_0000) | ((x.target & 0x3ff_ffff) << 2);
                 pc = addr;
             }
-            _ => todo!()
+            _ => todo!(),
         }
 
         self.set_pc(pc);

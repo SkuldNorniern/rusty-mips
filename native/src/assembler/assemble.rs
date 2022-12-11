@@ -1,14 +1,22 @@
 use super::error::*;
-use super::instruction::{FormatI, FormatR, Instruction};
-use crate::assembler::instruction::FormatJ;
-use crate::component::RegisterName;
+use crate::component::{Instruction, RegisterName, TypeI, TypeJ, TypeR};
 use crate::memory::{EndianMode, Segment};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::ops::RangeInclusive;
 use std::str::FromStr;
+
+/*
+Following instructions are well supported:
+and, or, add, sub, slt, lw, sw, beq, j
+
+Most other MIPS-1 instructions should be supported, but there might be bugs.
+Some instructions like break are not supported.
+
+Syntax is like SPIM simulator.
+ */
 
 fn try_parse_unsigned(text: &str) -> Option<u64> {
     let text = text.to_ascii_lowercase();
@@ -54,7 +62,7 @@ fn bail_trailing_token<'a>(mut iter: impl Iterator<Item = &'a str>) -> Result<()
     }
 }
 
-fn try_parse_ins_3arg(args: &str, line: &str) -> Result<FormatR, AssemblerError> {
+fn try_parse_ins_3arg(args: &str, line: &str) -> Result<TypeR, AssemblerError> {
     let mut args = args.split(',');
 
     let rd = args
@@ -69,15 +77,43 @@ fn try_parse_ins_3arg(args: &str, line: &str) -> Result<FormatR, AssemblerError>
 
     bail_trailing_token(args)?;
 
-    Ok(FormatR::new(
-        try_parse_reg(rd.trim())?,
-        try_parse_reg(rs.trim())?,
-        try_parse_reg(rt.trim())?,
-        0,
-    ))
+    Ok(TypeR {
+        rs: try_parse_reg(rs.trim())?,
+        rt: try_parse_reg(rt.trim())?,
+        rd: try_parse_reg(rd.trim())?,
+        shamt: 0,
+    })
 }
 
-fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerError> {
+fn try_parse_ins_imm(args: &str, line: &str) -> Result<TypeI, AssemblerError> {
+    let mut args = args.split(',');
+
+    let rs = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
+    let rt = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())?;
+    let imm = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
+        .and_then(|x| try_parse_signed(x).ok_or_else(|| InvalidTokenSnafu { token: x }.build()))?;
+
+    bail_trailing_token(args)?;
+
+    let upper_part = (imm as u64) & (!0xffff);
+    if upper_part != 0 && upper_part != 0xffff_ffff_ffff_0000 {
+        return Err(ImmediateTooLargeSnafu { imm }.build());
+    }
+
+    Ok(TypeI {
+        rs: try_parse_reg(rs.trim())?,
+        rt: try_parse_reg(rt.trim())?,
+        imm: imm as u16,
+    })
+}
+
+fn try_parse_ins_memory(args: &str, line: &str) -> Result<TypeI, AssemblerError> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(\$.+)\s*,\s*([^ ]+?)\((\$.+)\)").unwrap();
     }
@@ -100,7 +136,11 @@ fn try_parse_ins_memory(args: &str, line: &str) -> Result<FormatI, AssemblerErro
         OffsetTooLargeSnafu { offset: imm }.fail()?;
     }
 
-    Ok(FormatI::new(rs, rt, imm as u16))
+    Ok(TypeI {
+        rs,
+        rt,
+        imm: imm as u16,
+    })
 }
 
 fn try_parse_ins_branch(
@@ -108,7 +148,7 @@ fn try_parse_ins_branch(
     line: &str,
     pc: u32,
     labels: &Option<HashMap<String, u32>>,
-) -> Result<FormatI, AssemblerError> {
+) -> Result<TypeI, AssemblerError> {
     let mut args = args.split(',');
 
     let rs = args
@@ -149,7 +189,11 @@ fn try_parse_ins_branch(
         .try_into()
         .map_err(|_| OffsetTooLargeSnafu { offset }.build())?;
 
-    Ok(FormatI::new(rs, rt, offset as u16))
+    Ok(TypeI {
+        rs,
+        rt,
+        imm: offset as u16,
+    })
 }
 
 fn try_parse_ins_jump(
@@ -157,7 +201,7 @@ fn try_parse_ins_jump(
     line: &str,
     pc: u32,
     labels: &Option<HashMap<String, u32>>,
-) -> Result<FormatJ, AssemblerError> {
+) -> Result<TypeJ, AssemblerError> {
     let mut args = args.split(',');
 
     let label = args
@@ -187,7 +231,9 @@ fn try_parse_ins_jump(
         JumpTooFarSnafu { target, pc }.fail()?;
     }
 
-    Ok(FormatJ::new((target / 4) & 0x03FF_FFFF))
+    Ok(TypeJ {
+        target: (target / 4) & 0x03FF_FFFF,
+    })
 }
 
 fn try_parse_ins(
@@ -196,6 +242,8 @@ fn try_parse_ins(
     pc: u32,
     labels: &Option<HashMap<String, u32>>,
 ) -> Result<Instruction, AssemblerError> {
+    use Instruction::*;
+
     let args = line
         .trim()
         .strip_prefix(mnemonic)
@@ -203,15 +251,15 @@ fn try_parse_ins(
         .trim_start();
 
     Ok(match mnemonic {
-        "and" => Instruction::And(try_parse_ins_3arg(args, line)?),
-        "or" => Instruction::Or(try_parse_ins_3arg(args, line)?),
-        "add" => Instruction::Add(try_parse_ins_3arg(args, line)?),
-        "sub" => Instruction::Sub(try_parse_ins_3arg(args, line)?),
-        "slt" => Instruction::Slt(try_parse_ins_3arg(args, line)?),
-        "lw" => Instruction::Lw(try_parse_ins_memory(args, line)?),
-        "sw" => Instruction::Sw(try_parse_ins_memory(args, line)?),
-        "beq" => Instruction::Beq(try_parse_ins_branch(args, line, pc, labels)?),
-        "j" => Instruction::J(try_parse_ins_jump(args, line, pc, labels)?),
+        "and" => and(try_parse_ins_3arg(args, line)?),
+        "or" => or(try_parse_ins_3arg(args, line)?),
+        "add" => add(try_parse_ins_3arg(args, line)?),
+        "sub" => sub(try_parse_ins_3arg(args, line)?),
+        "slt" => slt(try_parse_ins_3arg(args, line)?),
+        "lw" => lw(try_parse_ins_memory(args, line)?),
+        "sw" => sw(try_parse_ins_memory(args, line)?),
+        "beq" => beq(try_parse_ins_branch(args, line, pc, labels)?),
+        "j" => j(try_parse_ins_jump(args, line, pc, labels)?),
         _ => UnknownInstructionSnafu { ins: mnemonic }.fail()?,
     })
 }
