@@ -1,6 +1,5 @@
 use crate::memory::endian_mode::EndianMode;
 use std::collections::HashMap;
-use std::ops::RangeInclusive;
 
 #[derive(Clone, Debug)]
 pub struct Segment {
