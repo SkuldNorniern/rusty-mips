@@ -22,12 +22,14 @@ impl Segment {
         }
     }
 
-    #[allow(clippy::reversed_empty_ranges)]
-    pub fn address_range(&self) -> RangeInclusive<u32> {
-        if !self.data.is_empty() {
-            self.base_addr..=(self.base_addr + self.data.len() as u32)
+    pub fn overlaps_with(&self, other: &Segment) -> bool {
+        let my_base = self.base_addr as u64;
+        let other_base = other.base_addr as u64;
+
+        if my_base <= other_base {
+            other_base < my_base + (self.data.len() as u64)
         } else {
-            1..=0
+            my_base < other_base + (other.data.len() as u64)
         }
     }
 

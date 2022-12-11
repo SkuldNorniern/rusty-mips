@@ -307,10 +307,6 @@ fn try_parse_ins(
     })
 }
 
-fn range_overlaps(a: RangeInclusive<u32>, b: RangeInclusive<u32>) -> bool {
-    !a.is_empty() && !b.is_empty() && a.start() <= b.end() && b.start() <= a.end()
-}
-
 fn parse(
     endian: EndianMode,
     asm: &str,
@@ -462,8 +458,8 @@ pub fn assemble(endian: EndianMode, asm: &str) -> Result<Vec<Segment>, Assembler
                 continue;
             }
 
-            if range_overlaps(a.address_range(), b.address_range()) {
-                SegmentOverlapSnafu {}.fail()?;
+            if a.overlaps_with(b) {
+                return SegmentOverlapSnafu {}.fail();
             }
         }
     }
