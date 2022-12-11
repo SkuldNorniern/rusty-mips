@@ -262,6 +262,65 @@ fn try_parse_ins_branch(
     })
 }
 
+fn try_parse_ins_branch_extra(
+    args: &str,
+    line: &str,
+    pc: u32,
+    labels: &Option<HashMap<String, u32>>,
+    mnemonic: &str,
+) -> Result<TypeI, AssemblerError> {
+    let mut args = args.split(',');
+
+    let rs = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
+        .map(|x| x.trim())
+        .and_then(try_parse_reg)?;
+    let label = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
+        .map(|x| x.trim())?;
+
+    bail_trailing_token(args)?;
+
+    let rt = match mnemonic {
+        "bgez" => 0x01,
+        "bgezal" => 0x11,
+        "bgtz" => 0x00,
+        "blez" => 0x00,
+        "bltz" => 0x00,
+        "bltzal" => 0x10,
+        _ => unreachable!(),
+    };
+
+    let offset = if let Ok(x) = try_parse_signed(label) {
+        // parse as offset
+        x
+    } else if let Some(map) = labels {
+        // parse as label
+        map.get(label)
+            .map(|x| *x as i64 - pc as i64 - 4)
+            .ok_or_else(|| LabelNotFoundSnafu { label }.build())?
+    } else {
+        // parse as label, but it's first pass; treat as 0
+        0
+    };
+
+    if offset % 4 != 0 {
+        BranchOffsetUnalignedSnafu { offset }.fail()?;
+    }
+
+    let offset: i16 = (offset / 4)
+        .try_into()
+        .map_err(|_| OffsetTooLargeSnafu { offset }.build())?;
+
+    Ok(TypeI {
+        rs,
+        rt: RegisterName::new(rt),
+        imm: offset as u16,
+    })
+}
+
 fn try_parse_ins_jump(
     args: &str,
     line: &str,
@@ -300,6 +359,59 @@ fn try_parse_ins_jump(
     Ok(TypeJ {
         target: (target / 4) & 0x03FF_FFFF,
     })
+}
+
+fn try_parse_ins_jump_reg(
+    args: &str,
+    line: &str,
+    accept_link: bool,
+) -> Result<TypeR, AssemblerError> {
+    let mut args = args.split(',');
+
+    let arg0 = args
+        .next()
+        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line }.build())
+        .map(|x| x.trim())?;
+
+    let arg1 = args.next().map(|x| x.trim());
+
+    bail_trailing_token(args)?;
+
+    let rs;
+    let rd;
+
+    if accept_link {
+        if arg1.is_some() {
+            rs = try_parse_reg(arg1.unwrap())?;
+            rd = try_parse_reg(arg0)?;
+        } else {
+            rs = try_parse_reg(arg0)?;
+            rd = RegisterName::new(31);
+        }
+    } else {
+        if arg1.is_some() {
+            return InvalidNumberOfOperandsSnafu { line }.fail();
+        } else {
+            rs = try_parse_reg(arg0)?;
+            rd = RegisterName::new(0);
+        }
+    }
+
+    Ok(TypeR {
+        rs,
+        rt: RegisterName::new(0),
+        rd,
+        shamt: 0,
+    })
+}
+
+fn try_parse_syscall(args: &str, line: &str) -> Result<TypeR, AssemblerError> {
+    if !args.trim_start().is_empty() {
+        return InvalidNumberOfOperandsSnafu { line }.fail();
+    }
+
+    // All zero except funct
+    Ok(Default::default())
 }
 
 fn try_parse_ins(
@@ -345,12 +457,24 @@ fn try_parse_ins(
         "xori" => xori(try_parse_ins_imm(args, line, false)?),
 
         "beq" => beq(try_parse_ins_branch(args, line, pc, labels)?),
-        "bgez" => bgez(todo!()),
-        "bgezal" => bgezal(todo!()),
-        "bgtz" => bgtz(todo!()),
-        "blez" => blez(todo!()),
-        "bltz" => bltz(todo!()),
-        "bltzal" => bltzal(todo!()),
+        "bgez" => bgez(try_parse_ins_branch_extra(
+            args, line, pc, labels, mnemonic,
+        )?),
+        "bgezal" => bgezal(try_parse_ins_branch_extra(
+            args, line, pc, labels, mnemonic,
+        )?),
+        "bgtz" => bgtz(try_parse_ins_branch_extra(
+            args, line, pc, labels, mnemonic,
+        )?),
+        "blez" => blez(try_parse_ins_branch_extra(
+            args, line, pc, labels, mnemonic,
+        )?),
+        "bltz" => bltz(try_parse_ins_branch_extra(
+            args, line, pc, labels, mnemonic,
+        )?),
+        "bltzal" => bltzal(try_parse_ins_branch_extra(
+            args, line, pc, labels, mnemonic,
+        )?),
         "bne" => bne(try_parse_ins_branch(args, line, pc, labels)?),
 
         "lb" => lb(try_parse_ins_memory(args, line)?),
@@ -364,9 +488,9 @@ fn try_parse_ins(
 
         "j" => j(try_parse_ins_jump(args, line, pc, labels)?),
         "jal" => jal(try_parse_ins_jump(args, line, pc, labels)?),
-        "jalr" => jalr(todo!()),
-        "jr" => jr(todo!()),
-        "syscall" => syscall(todo!()),
+        "jalr" => jalr(try_parse_ins_jump_reg(args, line, true)?),
+        "jr" => jr(try_parse_ins_jump_reg(args, line, false)?),
+        "syscall" => syscall(try_parse_syscall(args, line)?),
 
         _ => return UnknownInstructionSnafu { ins: mnemonic }.fail(),
     })
@@ -735,5 +859,43 @@ mod test {
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x02500007);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x001018c2);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x00118006);
+    }
+
+    #[test]
+    fn assemble_branches() {
+        let code = r"
+        .text 0x00400024
+        start:
+        jal start
+        jalr $a0
+        jalr $30, $20
+        syscall
+        jr $s0
+        bgez $20, start
+        bgezal $v0, start
+        bltz $v1, start
+        bltzal $s0, start
+        bgtz $sp, start
+        blez $sp, start";
+
+        let segs = assemble(*NE, code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400024);
+        assert_eq!(segs[0].data.len(), 44);
+        assert_eq!(segs[0].labels().len(), 1);
+        assert!(segs[0].labels().contains_key("start"));
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0c100009);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0080f809);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0280f009);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0000000c);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x02000008);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0681fffa);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0451fff9);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0460fff8);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0610fff7);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x1fa0fff6);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x1ba0fff5);
     }
 }
