@@ -16,6 +16,7 @@ Most other MIPS-1 instructions should be supported, but there might be bugs.
 Some instructions like break are not supported.
 
 Syntax is like SPIM simulator.
+Note: https://phoenix.goucher.edu/~kelliher/f2009/cs220/mipsir.html
  */
 
 fn try_parse_unsigned(text: &str) -> Option<u64> {
@@ -251,16 +252,58 @@ fn try_parse_ins(
         .trim_start();
 
     Ok(match mnemonic {
-        "and" => and(try_parse_ins_3arg(args, line)?),
-        "or" => or(try_parse_ins_3arg(args, line)?),
         "add" => add(try_parse_ins_3arg(args, line)?),
-        "sub" => sub(try_parse_ins_3arg(args, line)?),
+        "addu" => addu(try_parse_ins_3arg(args, line)?),
+        "and" => and(try_parse_ins_3arg(args, line)?),
+        "nor" => nor(try_parse_ins_3arg(args, line)?),
+        "or" => or(try_parse_ins_3arg(args, line)?),
         "slt" => slt(try_parse_ins_3arg(args, line)?),
-        "lw" => lw(try_parse_ins_memory(args, line)?),
-        "sw" => sw(try_parse_ins_memory(args, line)?),
+        "sltu" => sltu(try_parse_ins_3arg(args, line)?),
+        "sub" => sub(try_parse_ins_3arg(args, line)?),
+        "subu" => subu(try_parse_ins_3arg(args, line)?),
+        "xor" => xor(try_parse_ins_3arg(args, line)?),
+
+        "sll" => sll(todo!()),
+        "sllv" => sllv(try_parse_ins_3arg(args, line)?),
+        "sra" => sra(todo!()),
+        "srav" => srav(try_parse_ins_3arg(args, line)?),
+        "srl" => srl(todo!()),
+        "srlv" => srlv(try_parse_ins_3arg(args, line)?),
+
+        "addi" => addi(todo!()),
+        "addiu" => addiu(todo!()),
+        "andi" => andi(todo!()),
+        "lui" => lui(todo!()),
+        "ori" => ori(todo!()),
+        "slti" => slti(todo!()),
+        "sltiu" => sltiu(todo!()),
+        "xori" => xori(todo!()),
+
         "beq" => beq(try_parse_ins_branch(args, line, pc, labels)?),
+        "bgez" => bgez(todo!()),
+        "bgezal" => bgezal(todo!()),
+        "bgtz" => bgtz(todo!()),
+        "blez" => blez(todo!()),
+        "bltz" => bltz(todo!()),
+        "bltzal" => bltzal(todo!()),
+        "bne" => bne(try_parse_ins_branch(args, line, pc, labels)?),
+
+        "lb" => lb(try_parse_ins_memory(args, line)?),
+        "lbu" => lbu(try_parse_ins_memory(args, line)?),
+        "lh" => lh(try_parse_ins_memory(args, line)?),
+        "lhu" => lhu(try_parse_ins_memory(args, line)?),
+        "lw" => lw(try_parse_ins_memory(args, line)?),
+        "sb" => sb(try_parse_ins_memory(args, line)?),
+        "sh" => sh(try_parse_ins_memory(args, line)?),
+        "sw" => sw(try_parse_ins_memory(args, line)?),
+
         "j" => j(try_parse_ins_jump(args, line, pc, labels)?),
-        _ => UnknownInstructionSnafu { ins: mnemonic }.fail()?,
+        "jal" => jal(try_parse_ins_jump(args, line, pc, labels)?),
+        "jalr" => jalr(todo!()),
+        "jr" => jr(todo!()),
+        "syscall" => syscall(todo!()),
+
+        _ => return UnknownInstructionSnafu { ins: mnemonic }.fail(),
     })
 }
 
