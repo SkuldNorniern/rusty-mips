@@ -1,8 +1,12 @@
-use crate::component::{Instruction, RegisterName};
+use crate::component::{Instruction, RegisterName, TypeI};
 use crate::interpreter::error::{
     ArithmeticOverflowSnafu, InterpreterError, InvalidInstructionSnafu,
 };
 use crate::memory::Memory;
+
+fn branch_offset(x: TypeI) -> u32 {
+    (x.imm as i16 as i32 as u32) << 2
+}
 
 pub struct Interpreter {
     // reg[0] is pc
@@ -42,6 +46,10 @@ impl Interpreter {
         }
     }
 
+    fn handle_syscall(&mut self) {
+        // do nothing (for now)
+    }
+
     fn step(&mut self) -> Result<(), InterpreterError> {
         let ins = Instruction::decode(self.mem.read_u32(self.pc()));
 
@@ -62,45 +70,202 @@ impl Interpreter {
                 Some(val) => self.set_reg(x.rd, val as u32),
                 None => ArithmeticOverflowSnafu {}.fail()?,
             },
+            addu(x) => {
+                let val = u32::wrapping_add(self.reg(x.rs), self.reg(x.rt));
+                self.set_reg(x.rd, val);
+            }
             and(x) => {
                 let val = self.reg(x.rs) & self.reg(x.rt);
+                self.set_reg(x.rd, val);
+            }
+            nor(x) => {
+                let val = !(self.reg(x.rs) | self.reg(x.rt));
                 self.set_reg(x.rd, val);
             }
             or(x) => {
                 let val = self.reg(x.rs) | self.reg(x.rt);
                 self.set_reg(x.rd, val);
             }
-            sub(x) => match i32::checked_sub(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
-                Some(val) => self.set_reg(x.rd, val as u32),
-                None => ArithmeticOverflowSnafu {}.fail()?,
-            },
             slt(x) => {
                 let cond = (self.reg(x.rs) as i32) < (self.reg(x.rt) as i32);
                 self.set_reg(x.rd, cond.into());
             }
-            lw(x) => {
-                let sign_ext_imm = x.imm as i16 as i32 as u32;
-                let addr = u32::wrapping_add(self.reg(x.rs), sign_ext_imm);
-                self.set_reg(x.rt, self.mem.read_u32(addr));
+            sltu(x) => {
+                let cond = self.reg(x.rs) < self.reg(x.rt);
+                self.set_reg(x.rd, cond.into());
             }
-            sw(x) => {
-                let sign_ext_imm = x.imm as i16 as i32 as u32;
-                let addr = u32::wrapping_add(self.reg(x.rs), sign_ext_imm);
-                self.mem.write_u32(addr, self.reg(x.rt));
+            sub(x) => match i32::checked_sub(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
+                Some(val) => self.set_reg(x.rd, val as u32),
+                None => ArithmeticOverflowSnafu {}.fail()?,
+            },
+            subu(x) => {
+                let val = u32::wrapping_sub(self.reg(x.rs), self.reg(x.rt));
+                self.set_reg(x.rd, val);
+            }
+            xor(x) => {
+                let val = self.reg(x.rs) ^ self.reg(x.rt);
+                self.set_reg(x.rd, val);
+            }
+            sll(x) => {
+                let val = self.reg(x.rt) << x.shamt;
+                self.set_reg(x.rd, val);
+            }
+            sllv(x) => {
+                let val = self.reg(x.rt) << self.reg(x.rs);
+                self.set_reg(x.rd, val);
+            }
+            sra(x) => {
+                let val = (self.reg(x.rt) as i32) >> x.shamt;
+                self.set_reg(x.rd, val as u32);
+            }
+            srav(x) => {
+                let val = (self.reg(x.rt) as i32) >> self.reg(x.rs);
+                self.set_reg(x.rd, val as u32);
+            }
+            srl(x) => {
+                let val = self.reg(x.rt) >> x.shamt;
+                self.set_reg(x.rd, val);
+            }
+            srlv(x) => {
+                let val = self.reg(x.rt) >> self.reg(x.rs);
+                self.set_reg(x.rd, val);
+            }
+            addi(x) => match i32::checked_add(self.reg(x.rs) as i32, x.imm as i16 as i32) {
+                Some(val) => self.set_reg(x.rt, val as u32),
+                None => ArithmeticOverflowSnafu {}.fail()?,
+            },
+            addiu(x) => {
+                let val = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.set_reg(x.rt, val);
+            }
+            andi(x) => {
+                let val = self.reg(x.rs) & (x.imm as u32);
+                self.set_reg(x.rt, val);
+            }
+            lui(x) => {
+                self.set_reg(x.rt, (x.imm as u32) << 16);
+            }
+            ori(x) => {
+                let val = self.reg(x.rs) | (x.imm as u32);
+                self.set_reg(x.rt, val);
+            }
+            slti(x) => {
+                let val = if (self.reg(x.rs) as i32) < (x.imm as i16 as i32) {
+                    1
+                } else {
+                    0
+                };
+                self.set_reg(x.rt, val);
+            }
+            sltiu(x) => {
+                let val = if self.reg(x.rs) < (x.imm as u32) {
+                    1
+                } else {
+                    0
+                };
+                self.set_reg(x.rt, val);
+            }
+            xori(x) => {
+                let val = self.reg(x.rs) ^ (x.imm as u32);
+                self.set_reg(x.rt, val);
             }
             beq(x) => {
-                let sign_ext_imm = x.imm as i16 as i32 as u32;
-                let branch_offset = sign_ext_imm << 2;
-
                 if self.reg(x.rs) == self.reg(x.rt) {
-                    pc = u32::wrapping_add(pc, branch_offset);
+                    pc = pc.wrapping_add(branch_offset(x));
                 }
+            }
+            bgez(x) => {
+                if (self.reg(x.rs) as i32) >= 0 {
+                    pc = pc.wrapping_add(branch_offset(x));
+                }
+            }
+            bgezal(x) => {
+                if (self.reg(x.rs) as i32) >= 0 {
+                    self.set_reg(RegisterName::new(31), pc);
+                    pc = pc.wrapping_add(branch_offset(x));
+                }
+            }
+            bgtz(x) => {
+                if (self.reg(x.rs) as i32) > 0 {
+                    pc = pc.wrapping_add(branch_offset(x));
+                }
+            }
+            blez(x) => {
+                if (self.reg(x.rs) as i32) < 0 {
+                    pc = pc.wrapping_add(branch_offset(x));
+                }
+            }
+            bltz(x) => {
+                if (self.reg(x.rs) as i32) < 0 {
+                    pc = pc.wrapping_add(branch_offset(x));
+                }
+            }
+            bltzal(x) => {
+                if (self.reg(x.rs) as i32) < 0 {
+                    self.set_reg(RegisterName::new(31), pc);
+                    pc = pc.wrapping_add(branch_offset(x));
+                }
+            }
+            bne(x) => {
+                if self.reg(x.rs) != self.reg(x.rt) {
+                    pc = pc.wrapping_add(branch_offset(x));
+                }
+            }
+            lb(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.set_reg(x.rt, self.mem.read_u8(addr) as i8 as i32 as u32);
+            }
+            lbu(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.set_reg(x.rt, self.mem.read_u8(addr) as u32);
+            }
+            lh(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.set_reg(x.rt, self.mem.read_u16(addr) as i16 as i32 as u32);
+            }
+            lhu(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.set_reg(x.rt, self.mem.read_u16(addr) as u32);
+            }
+            lw(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.set_reg(x.rt, self.mem.read_u32(addr));
+            }
+            sb(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.mem.write_u8(addr, self.reg(x.rt) as u8);
+            }
+            sh(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.mem.write_u16(addr, self.reg(x.rt) as u16);
+            }
+            sw(x) => {
+                let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
+                self.mem.write_u32(addr, self.reg(x.rt));
             }
             j(x) => {
                 let addr = (pc & 0xf000_0000) | ((x.target & 0x3ff_ffff) << 2);
                 pc = addr;
             }
-            _ => todo!(),
+            jal(x) => {
+                let addr = (pc & 0xf000_0000) | ((x.target & 0x3ff_ffff) << 2);
+                self.set_reg(RegisterName::new(31), pc);
+                pc = addr;
+            }
+            jalr(x) => {
+                let addr = self.reg(x.rs);
+                self.set_reg(x.rd, pc);
+                pc = addr;
+            }
+            jr(x) => {
+                pc = self.reg(x.rs);
+            }
+            syscall(x) => {
+                self.handle_syscall();
+            }
+            invalid(x) => {
+                return InvalidInstructionSnafu { ins: x }.fail();
+            }
         }
 
         self.set_pc(pc);
@@ -241,5 +406,108 @@ mod test {
             state.step().unwrap();
         }
         assert_eq!(state.pc(), 0x1234);
+    }
+
+    #[test]
+    fn arithmetic() {
+        let mut state = init_state(
+            r".text
+            add $16, $16, $17
+            sub $16, $17, $16
+            addu $16, $16, $17
+            and $16, $16, $17
+            nor $16, $16, $17
+            or $16, $16, $17
+            xor $16, $16, $17
+            sll $16, $16, 3
+            sllv $16, $17, $18
+            sra $16, $16, 3
+            srav $16, $16, $18
+            srl $16, $16, 3
+            srlv $16, $16, $18
+            slt $8, $16, $17
+            slt $9, $17, $16
+            sltu $10, $16, $17
+            sltu $11, $17, $16",
+        );
+
+        state.reg[16] = 1234;
+        state.reg[17] = 4321;
+        state.reg[18] = 2;
+
+        let expected_output = [
+            0x15b3,
+            0xffff_fb2e,
+            0xc0f,
+            1,
+            0xffff_ef1e,
+            0xffff_ffff,
+            0xffff_ef1e,
+            0xffff_78f0,
+            0x4384,
+            0x870,
+            0x21c,
+            0x43,
+            0x10,
+            0x10,
+            0x10,
+            0x10,
+            0x10,
+        ];
+
+        for output in expected_output {
+            state.step().unwrap();
+            assert_eq!(state.reg[16], output);
+        }
+
+        assert_eq!(state.reg[8], 1);
+        assert_eq!(state.reg[9], 0);
+        assert_eq!(state.reg[10], 1);
+        assert_eq!(state.reg[11], 0);
+    }
+
+    #[test]
+    fn fibonacci() {
+        // See https://gist.github.com/libertylocked/068b118354539a8be992
+        let mut state = init_state(
+            r"
+        .text
+        .globl main
+        main:
+            ori $a0, $0, 10
+            or $s0, $ra, $zero
+            jal fibonacci
+            or $ra, $s0, $zero
+            jr $ra  # Terminate the program
+        fibonacci:
+            # Prologue
+            addi $sp, $sp, -12
+            sw $ra, 8($sp)
+            sw $s0, 4($sp)
+            sw $s1, 0($sp)
+            or $s0, $a0, $zero
+            ori $v0, $zero, 1 # return value for terminal condition
+			slti $t0, $16, 3
+            bne $t0, $0, fibonacciExit # check terminal condition
+            addi $a0, $s0, -1 # set args for recursive call to f(n-1)
+            jal fibonacci
+            or $s1, $v0, $zero # store result of f(n-1) to s1
+            addi $a0, $s0, -2 # set args for recursive call to f(n-2)
+            jal fibonacci
+            add $v0, $s1, $v0 # add result of f(n-1) to it
+        fibonacciExit:
+            # Epilogue
+            lw $ra, 8($sp)
+            lw $s0, 4($sp)
+            lw $s1, 0($sp)
+            addi $sp, $sp, 12
+            jr $ra
+            ## End of function fibonacci",
+        );
+
+        while state.pc() != 0 {
+            state.step().unwrap();
+        }
+        assert_eq!(state.reg[2], 55);
     }
 }

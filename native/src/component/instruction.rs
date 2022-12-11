@@ -1,4 +1,5 @@
 use super::register_name::RegisterName;
+use std::fmt::{Debug, Formatter};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct TypeR {
@@ -117,7 +118,7 @@ impl TypeJ {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Instruction {
     // Most MIPS I opcodes: https://opencores.org/projects/plasma/opcodes
     // Arithmetic - Core
