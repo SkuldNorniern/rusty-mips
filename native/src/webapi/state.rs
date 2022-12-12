@@ -1,6 +1,7 @@
 use crate::assembler::assemble;
+use crate::component::RegisterName;
 use crate::interpreter::Interpreter;
-use crate::memory::{create_memory, EndianMode};
+use crate::memory::{create_memory, create_empty_memory, EndianMode};
 use neon::prelude::*;
 use std::sync::Arc;
 
@@ -11,9 +12,17 @@ pub struct State {
     inner: Inner,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 struct Inner {
-    interpreter: Option<Interpreter>,
+    interpreter: Interpreter,
+}
+
+impl Default for Inner {
+    fn default() -> Self {
+        Inner {
+            interpreter: Interpreter::new(create_empty_memory(EndianMode::native())),
+        }
+    }
 }
 
 impl State {
@@ -35,8 +44,16 @@ impl State {
     pub fn assemble(&mut self, code: &str) -> Result<(), String> {
         let segs = assemble(EndianMode::native(), code).map_err(|e| e.to_string())?;
         let mem = create_memory(EndianMode::native(), &segs);
-        self.inner.interpreter = Some(Interpreter::new(mem));
+        self.inner.interpreter = Interpreter::new(mem);
         self.notify_all();
+        Ok(())
+    }
+
+    pub fn edit_register(&mut self, r: RegisterName, val: u32) -> Result<(), ()> {
+        self.inner.interpreter.set_reg(r, val);
+
+        self.notify_all();
+
         Ok(())
     }
 
@@ -62,9 +79,7 @@ impl State {
 impl Inner {
     fn capture_regs(&self) -> [u32; 32] {
         let mut ret = [0; 32];
-        if let Some(x) = self.interpreter.as_ref() {
-            x.read_all_reg(&mut ret);
-        }
+        self.interpreter.read_all_reg(&mut ret);
         ret
     }
 }

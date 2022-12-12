@@ -4,6 +4,7 @@ import Card from 'react-bootstrap/Card';
 import RadixValue from '../components/RadixValue';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { NativeLibContext } from '../context/NativeLibContext';
+import { EditRegisterValueModal } from './EditRegisterValueModal';
 
 const RootTable = styled.div`
   display: inline-block;
@@ -66,20 +67,23 @@ const MenuToggle = React.forwardRef<HTMLSpanElement, InnerProps>(({ children, on
 
 MenuToggle.displayName = 'MenuToggle';
 
-const registerNames: { [k: number]: string | undefined } = generateRegisterNames();
+export const registerNames: { [k: number]: string | undefined } = generateRegisterNames();
 
 const Registers = (): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
   const [format, setFormat] = React.useState('hex');
+  const [editRegisterDialogIndex, setEditRegisterDialogIndex] = React.useState(-1);
 
-  console.log('redrawing!');
+  const closeEditRegisterDialog = (): void => {
+    setEditRegisterDialogIndex(-1);
+  };
 
   if (!native.initialized) { return null; }
 
-  const onSelect = (key: any): void => {
+  const onSelect = (idx: number, key: any): void => {
     switch (key) {
       case 'edit':
-        alert('todo');
+        setEditRegisterDialogIndex((prev) => (prev === -1 ? idx : prev));
         break;
       case 'viewBin':
         setFormat('bin');
@@ -96,10 +100,15 @@ const Registers = (): JSX.Element | null => {
   };
 
   return (
+    <>
+      <EditRegisterValueModal
+        regIndex={editRegisterDialogIndex}
+        onHide={closeEditRegisterDialog}
+        onSet={(idx, value) => native.lib.editRegister(idx, value)} />
     <Card style={{ display: 'inline-block' }}>
       <RootTable>
           {native.state.regs.map((val, idx) => (
-            <Dropdown key={idx} onSelect={onSelect}>
+            <Dropdown key={idx} onSelect={onSelect.bind(null, idx)}>
               <Dropdown.Toggle as={MenuToggle}>
                 <div key={idx}>
                   <span>
@@ -109,7 +118,7 @@ const Registers = (): JSX.Element | null => {
                 </div>
               </Dropdown.Toggle>
               <Dropdown.Menu>
-                <Dropdown.Item eventKey="edit">수정</Dropdown.Item>
+                <Dropdown.Item eventKey="edit" disabled={idx === 0}>수정</Dropdown.Item>
                 <Dropdown.Divider/>
                 <Dropdown.Item eventKey="viewBin">2진수로 표시</Dropdown.Item>
                 <Dropdown.Item eventKey="viewDec">10진수로 표시</Dropdown.Item>
@@ -119,6 +128,7 @@ const Registers = (): JSX.Element | null => {
           ))}
       </RootTable>
     </Card>
+    </>
   );
 };
 

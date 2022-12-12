@@ -38,3 +38,7 @@ pub fn create_memory(endian: EndianMode, segments: &[Segment]) -> Box<dyn Memory
         }
     }
 }
+
+pub fn create_empty_memory(endian: EndianMode) -> Box<dyn Memory> {
+    super::emptymem::EmptyMem::new(endian)
+}

@@ -6,6 +6,7 @@ export interface NativeLib {
   reset: () => void
 
   assemble: (code: string) => string | null
+  editRegister: (idx: number, value: number) => undefined
 }
 
 interface IModuleStateRaw {
