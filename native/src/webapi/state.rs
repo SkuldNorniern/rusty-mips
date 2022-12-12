@@ -1,7 +1,7 @@
 use crate::assembler::assemble;
 use crate::component::RegisterName;
 use crate::interpreter::Interpreter;
-use crate::memory::{create_memory, create_empty_memory, EndianMode};
+use crate::memory::{create_empty_memory, create_memory, EndianMode};
 use neon::prelude::*;
 use std::sync::Arc;
 
@@ -57,15 +57,24 @@ impl State {
         Ok(())
     }
 
+    pub fn read_memory(&self, page_idx: u32, output: &mut [u8]) {
+        let addr = page_idx * 4096;
+        let mem = self.inner.interpreter.mem();
+        mem.read_into_slice(addr, output);
+    }
+
     fn notify_all(&self) {
         let callback = self.callback.clone();
 
         let regs = self.inner.capture_regs();
+        let pc = self.inner.capture_pc();
 
         self.channel.send(move |mut cx| {
             let regs = js_array_numbers(&mut cx, &regs)?;
+            let pc = cx.number(pc);
             let obj = cx.empty_object();
             obj.set(&mut cx, "regs", regs)?;
+            obj.set(&mut cx, "pc", pc)?;
 
             callback
                 .to_inner(&mut cx)
@@ -81,6 +90,10 @@ impl Inner {
         let mut ret = [0; 32];
         self.interpreter.read_all_reg(&mut ret);
         ret
+    }
+
+    fn capture_pc(&self) -> u32 {
+        self.interpreter.pc()
     }
 }
 

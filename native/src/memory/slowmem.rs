@@ -150,6 +150,45 @@ impl Memory for SlowMem {
         }
     }
 
+    fn read_into_slice(&self, addr: u32, output: &mut [u8]) {
+        assert!(
+            TryInto::<u32>::try_into(output.len()).is_ok(),
+            "data length must be less than u32"
+        );
+
+        if output.is_empty() {
+            return;
+        }
+
+        let mut page_idx = (addr / PAGE_SIZE) as usize;
+        let mut pos = 0;
+        let mut page_offset = addr % PAGE_SIZE;
+        loop {
+            let remaining_bytes = (output.len() - pos) as u32;
+            let writable_bytes = PAGE_SIZE - page_offset;
+            let copy_bytes = u32::min(remaining_bytes, writable_bytes) as usize;
+
+            let output_from = pos;
+            let output_to = output_from + copy_bytes;
+            let mem_from = page_offset as usize;
+            let mem_to = mem_from + copy_bytes;
+
+            if let Some(page) = self.pages[page_idx as usize].as_ref() {
+                output[output_from..output_to].copy_from_slice(&page[mem_from..mem_to]);
+            } else {
+                output[output_from..output_to].fill(0);
+            }
+
+            page_offset = 0;
+            pos += copy_bytes;
+            page_idx += 1;
+
+            if remaining_bytes <= writable_bytes {
+                break;
+            }
+        }
+    }
+
     fn write_u8(&mut self, addr: u32, data: u8) {
         let page_idx = addr / PAGE_SIZE;
         let page_offset = addr % PAGE_SIZE;

@@ -1,5 +1,5 @@
-use std::ptr::NonNull;
 use crate::memory::{EndianMode, Memory};
+use std::ptr::NonNull;
 
 // Something like /dev/null
 
@@ -10,9 +10,7 @@ pub struct EmptyMem {
 
 impl EmptyMem {
     pub fn new(endian: EndianMode) -> Box<EmptyMem> {
-        Box::new(EmptyMem {
-            endian
-        })
+        Box::new(EmptyMem { endian })
     }
 }
 
@@ -25,11 +23,21 @@ impl Memory for EmptyMem {
         None
     }
 
-    fn read_u8(&self, _addr: u32) -> u8 { 0 }
+    fn read_u8(&self, _addr: u32) -> u8 {
+        0
+    }
 
-    fn read_u16(&self, _addr: u32) -> u16 { 0 }
+    fn read_u16(&self, _addr: u32) -> u16 {
+        0
+    }
 
-    fn read_u32(&self, _addr: u32) -> u32 { 0 }
+    fn read_u32(&self, _addr: u32) -> u32 {
+        0
+    }
+
+    fn read_into_slice(&self, _addr: u32, output: &mut [u8]) {
+        output.fill(0);
+    }
 
     fn write_u8(&mut self, _addr: u32, _data: u8) {}
 

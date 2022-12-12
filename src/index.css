@@ -25,15 +25,20 @@
 }
 
 body {
-    font-family: 'Nanum Gothic', sans-serif;
+    font-family: 'Nanum Gothic', sans-serif !important;
 }
 
-code, textarea.code {
+.text {
+    font-family: 'Nanum Gothic', sans-serif !important;
+}
+
+code, .code {
     font-family: 'Nanum Gothic Coding', monospace !important;
 }
 
 html, body, #root {
     height: 100vh;
+    width: 100vw;
 }
 
 .fullscreen-tab-root {
@@ -43,7 +48,8 @@ html, body, #root {
 }
 
 .fullscreen-tab-root > .tab-content {
-    flex: 1;
+    flex-grow: 1;
+    overflow-y: hidden;
 }
 
 .fullscreen-tab-root > .tab-content > .tab-pane.show {

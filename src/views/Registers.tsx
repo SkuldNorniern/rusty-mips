@@ -105,29 +105,29 @@ const Registers = (): JSX.Element | null => {
         regIndex={editRegisterDialogIndex}
         onHide={closeEditRegisterDialog}
         onSet={(idx, value) => native.lib.editRegister(idx, value)} />
-    <Card style={{ display: 'inline-block' }}>
-      <RootTable>
-          {native.state.regs.map((val, idx) => (
-            <Dropdown key={idx} onSelect={onSelect.bind(null, idx)}>
-              <Dropdown.Toggle as={MenuToggle}>
-                <div key={idx}>
-                  <span>
-                    R{idx.toString().padEnd(2)}&nbsp;[{registerNames[idx]}] =&nbsp;
-                  </span>
-                  <RadixValue value={val} format={format}/>
-                </div>
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item eventKey="edit" disabled={idx === 0}>수정</Dropdown.Item>
-                <Dropdown.Divider/>
-                <Dropdown.Item eventKey="viewBin">2진수로 표시</Dropdown.Item>
-                <Dropdown.Item eventKey="viewDec">10진수로 표시</Dropdown.Item>
-                <Dropdown.Item eventKey="viewHex">16진수로 표시</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          ))}
-      </RootTable>
-    </Card>
+      <Card style={{ display: 'inline-block' }}>
+        <RootTable>
+            {native.state.regs.map((val, idx) => (
+              <Dropdown key={idx} onSelect={onSelect.bind(null, idx)}>
+                <Dropdown.Toggle as={MenuToggle}>
+                  <div key={idx}>
+                    <span>
+                      R{idx.toString().padEnd(2)}&nbsp;[{registerNames[idx]}] =&nbsp;
+                    </span>
+                    <RadixValue value={val} format={format}/>
+                  </div>
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item eventKey="edit" disabled={idx === 0}>수정</Dropdown.Item>
+                  <Dropdown.Divider/>
+                  <Dropdown.Item eventKey="viewBin">2진수로 표시</Dropdown.Item>
+                  <Dropdown.Item eventKey="viewDec">10진수로 표시</Dropdown.Item>
+                  <Dropdown.Item eventKey="viewHex">16진수로 표시</Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            ))}
+        </RootTable>
+      </Card>
     </>
   );
 };

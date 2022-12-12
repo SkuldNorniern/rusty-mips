@@ -2,6 +2,7 @@ use super::state::State;
 use super::util::take_state;
 use crate::component::RegisterName;
 use neon::prelude::*;
+use neon::types::buffer::TypedArray;
 
 const API_VERSION: u32 = 1;
 
@@ -65,11 +66,26 @@ fn edit_register(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     Ok(cx.undefined())
 }
 
+fn read_memory(mut cx: FunctionContext) -> JsResult<JsBoolean> {
+    let page_idx = cx.argument::<JsNumber>(0)?.value(&mut cx) as i32;
+    let mut dst = cx.argument::<JsUint8Array>(1)?;
+    if !(0..1048576).contains(&page_idx) {
+        return Ok(cx.boolean(false));
+    }
+
+    let state = take_state(&mut cx)?;
+    let buffer = dst.as_mut_slice(&mut cx);
+    state.read_memory(page_idx as u32, buffer);
+
+    Ok(cx.boolean(true))
+}
+
 pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("init", init)?;
     cx.export_function("finalize", finalize)?;
     cx.export_function("reset", reset)?;
     cx.export_function("assemble", assemble)?;
     cx.export_function("editRegister", edit_register)?;
+    cx.export_function("readMemory", read_memory)?;
     Ok(())
 }

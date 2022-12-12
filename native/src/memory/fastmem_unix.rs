@@ -1,4 +1,5 @@
-use crate::memory::{EndianMode, Memory, Segment};
+use super::memory_trait::FastMem;
+use super::{EndianMode, Memory, Segment};
 use lazy_static::lazy_static;
 use libc::*;
 use lockfree::map::Map;
@@ -6,7 +7,6 @@ use std::alloc::{alloc_zeroed, Layout};
 use std::fmt::{Debug, Formatter};
 use std::mem::{size_of, zeroed};
 use std::ptr::null_mut;
-use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 lazy_static! {
@@ -110,51 +110,9 @@ impl FastMemUnix {
     }
 }
 
-impl Memory for FastMemUnix {
-    fn endian(&self) -> EndianMode {
-        EndianMode::native()
-    }
-
-    fn fastmem_addr(&self) -> Option<NonNull<u8>> {
-        NonNull::new(self.base_addr)
-    }
-
-    fn read_u8(&self, addr: u32) -> u8 {
-        unsafe { (self.base_addr.add(addr as usize) as *mut u8).read_unaligned() }
-    }
-
-    fn read_u16(&self, addr: u32) -> u16 {
-        unsafe { (self.base_addr.add(addr as usize) as *mut u16).read_unaligned() }
-    }
-
-    fn read_u32(&self, addr: u32) -> u32 {
-        unsafe { (self.base_addr.add(addr as usize) as *mut u32).read_unaligned() }
-    }
-
-    fn write_u8(&mut self, addr: u32, data: u8) {
-        unsafe { (self.base_addr.add(addr as usize) as *mut u8).write_unaligned(data) }
-    }
-
-    fn write_u16(&mut self, addr: u32, data: u16) {
-        unsafe { (self.base_addr.add(addr as usize) as *mut u16).write_unaligned(data) }
-    }
-
-    fn write_u32(&mut self, addr: u32, data: u32) {
-        unsafe { (self.base_addr.add(addr as usize) as *mut u32).write_unaligned(data) }
-    }
-
-    fn write_from_slice(&mut self, addr: u32, data: &[u8]) {
-        assert!(data.len() <= u32::MAX as usize, "data too long");
-        assert!(
-            addr <= u32::MAX - data.len() as u32,
-            "cannot write past memory"
-        );
-
-        unsafe {
-            self.base_addr
-                .add(addr as usize)
-                .copy_from(data.as_ptr(), data.len());
-        }
+impl FastMem for FastMemUnix {
+    fn fastmem_addr(&self) -> *mut u8 {
+        self.base_addr
     }
 }
 

@@ -1,8 +1,8 @@
+mod emptymem;
 mod endian_mode;
 mod memory_trait;
 mod segment;
 mod slowmem;
-mod emptymem;
 
 cfg_if::cfg_if! {
     if #[cfg(windows)] {
@@ -13,5 +13,5 @@ cfg_if::cfg_if! {
 }
 
 pub use endian_mode::EndianMode;
-pub use memory_trait::{create_memory, create_empty_memory, Memory};
+pub use memory_trait::{create_empty_memory, create_memory, Memory};
 pub use segment::Segment;
