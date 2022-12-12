@@ -8,6 +8,7 @@ fn branch_offset(x: TypeI) -> u32 {
     (x.imm as i16 as i32 as u32) << 2
 }
 
+#[derive(Debug)]
 pub struct Interpreter {
     // reg[0] is pc
     reg: [u32; 32],
@@ -24,11 +25,26 @@ impl Interpreter {
         Interpreter { reg, mem }
     }
 
-    fn pc(&self) -> u32 {
+    pub fn mem(&self) -> &dyn Memory {
+        &*self.mem
+    }
+
+    pub fn mem_mut(&mut self) -> &mut dyn Memory {
+        &mut *self.mem
+    }
+
+    pub fn read_all_reg(&self, dst: &mut [u32]) {
+        assert!(dst.len() >= 32);
+
+        dst[0] = 0;
+        dst[1..32].copy_from_slice(&self.reg[1..]);
+    }
+
+    pub fn pc(&self) -> u32 {
         self.reg[0]
     }
 
-    fn reg(&self, reg: RegisterName) -> u32 {
+    pub fn reg(&self, reg: RegisterName) -> u32 {
         if reg.num() != 0 {
             self.reg[reg.num() as usize]
         } else {
@@ -36,11 +52,11 @@ impl Interpreter {
         }
     }
 
-    fn set_pc(&mut self, val: u32) {
+    pub fn set_pc(&mut self, val: u32) {
         self.reg[0] = val;
     }
 
-    fn set_reg(&mut self, reg: RegisterName, val: u32) {
+    pub fn set_reg(&mut self, reg: RegisterName, val: u32) {
         if reg.num() != 0 {
             self.reg[reg.num() as usize] = val;
         }
@@ -50,7 +66,7 @@ impl Interpreter {
         // do nothing (for now)
     }
 
-    fn step(&mut self) -> Result<(), InterpreterError> {
+    pub fn step(&mut self) -> Result<(), InterpreterError> {
         let ins = Instruction::decode(self.mem.read_u32(self.pc()));
 
         if let Some(x) = ins.as_invalid() {

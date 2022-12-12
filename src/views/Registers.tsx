@@ -3,12 +3,13 @@ import styled from '@emotion/styled';
 import Card from 'react-bootstrap/Card';
 import RadixValue from '../components/RadixValue';
 import Dropdown from 'react-bootstrap/Dropdown';
+import { NativeLibContext } from '../context/NativeLibContext';
 
 const RootTable = styled.div`
   display: inline-block;
   font-family: 'Nanum Gothic Coding', monospace;
   padding: .5rem;
-  width: 22.5em;
+  min-width: 10.5em;
   overflow-x: visible;
   white-space: nowrap;
   user-select: none;
@@ -67,9 +68,13 @@ MenuToggle.displayName = 'MenuToggle';
 
 const registerNames: { [k: number]: string | undefined } = generateRegisterNames();
 
-const Registers = (): JSX.Element => {
-  const regs = [...Array(32).keys()];
+const Registers = (): JSX.Element | null => {
+  const native = React.useContext(NativeLibContext);
   const [format, setFormat] = React.useState('hex');
+
+  console.log('redrawing!');
+
+  if (!native.initialized) { return null; }
 
   const onSelect = (key: any): void => {
     switch (key) {
@@ -93,7 +98,7 @@ const Registers = (): JSX.Element => {
   return (
     <Card style={{ display: 'inline-block' }}>
       <RootTable>
-          {regs.map((val, idx) => (
+          {native.state.regs.map((val, idx) => (
             <Dropdown key={idx} onSelect={onSelect}>
               <Dropdown.Toggle as={MenuToggle}>
                 <div key={idx}>

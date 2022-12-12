@@ -3,6 +3,7 @@ use lazy_static::lazy_static;
 use libc::*;
 use lockfree::map::Map;
 use std::alloc::{alloc_zeroed, Layout};
+use std::fmt::{Debug, Formatter};
 use std::mem::{size_of, zeroed};
 use std::ptr::null_mut;
 use std::ptr::NonNull;
@@ -24,8 +25,19 @@ pub struct FastMemUnix {
     allocated: [AtomicBool; 1048576],
 }
 
+unsafe impl Send for FastMemUnix {}
+unsafe impl Sync for FastMemUnix {}
+
+impl Debug for FastMemUnix {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FastMemUnix")
+            .field("base_addr", &self.base_addr)
+            .finish()
+    }
+}
+
 impl FastMemUnix {
-    fn try_new(endian: EndianMode, segments: &[Segment]) -> Option<Box<Self>> {
+    pub fn try_new(endian: EndianMode, segments: &[Segment]) -> Option<Box<Self>> {
         if endian != EndianMode::native() || size_of::<usize>() <= size_of::<u32>() {
             // non-native endian or 32-bit system
             return None;
@@ -205,8 +217,6 @@ unsafe extern "system" fn handler(sig_num: c_int, info: *const siginfo_t, _ctx: 
         let mem = x.val().0;
 
         if addr < base_addr || base_addr + 0xffff_ffff < addr {
-            let msg = "invalid address!\n";
-            write(STDERR_FILENO, msg.as_ptr() as *mut c_void, msg.len());
             // invalid address
             continue;
         }
@@ -224,7 +234,7 @@ unsafe extern "system" fn handler(sig_num: c_int, info: *const siginfo_t, _ctx: 
     }
 
     // did not find appropriate area
-    let msg = "SIGSEGV caught and did not find appropriate area\n";
+    let msg = "SIGSEGV caught and did not find appropriate instance\n";
     write(STDERR_FILENO, msg.as_ptr() as *mut c_void, msg.len());
     abort();
 }

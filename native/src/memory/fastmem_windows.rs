@@ -3,6 +3,7 @@ use lazy_static::lazy_static;
 use lockfree::map::Map;
 use std::alloc::Layout;
 use std::ffi::c_void;
+use std::fmt::{Debug, Formatter};
 use std::ptr::{null_mut, NonNull};
 use std::sync::atomic::{AtomicIsize, Ordering};
 use windows::core::PCWSTR;
@@ -34,6 +35,17 @@ pub struct FastMemWindows {
     curr_process: HANDLE,
     handler: *mut c_void,
     pagefiles: [AtomicIsize; 1048576],
+}
+
+unsafe impl Send for FastMemWindows {}
+unsafe impl Sync for FastMemWindows {}
+
+impl Debug for FastMemWindows {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FastMemWindows")
+            .field("base_addr", &self.base_addr)
+            .finish()
+    }
 }
 
 impl FastMemWindows {

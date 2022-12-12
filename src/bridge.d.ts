@@ -1,4 +1,4 @@
-import NativeLib from './NativeLib';
+import { NativeLib } from './NativeLib';
 
 declare global {
   interface Window {

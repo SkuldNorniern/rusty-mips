@@ -2,6 +2,7 @@ use crate::memory::memory_trait::Memory;
 use crate::memory::{EndianMode, Segment};
 use std::alloc::Layout;
 use std::convert::TryInto;
+use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 
 const PAGE_SIZE: u32 = 4096;
@@ -93,6 +94,14 @@ impl SlowMem {
             self.pages[page_idx as usize] = Some(create_boxed_page());
         }
         self.pages[page_idx as usize].as_mut().unwrap()
+    }
+}
+
+impl Debug for SlowMem {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SlowMem")
+            .field("endian", &self.endian)
+            .finish()
     }
 }
 

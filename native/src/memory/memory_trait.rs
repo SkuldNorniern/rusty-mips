@@ -1,7 +1,8 @@
 use crate::memory::{EndianMode, Segment};
+use std::fmt::Debug;
 use std::ptr::NonNull;
 
-pub trait Memory {
+pub trait Memory: Send + Sync + Debug {
     fn endian(&self) -> EndianMode;
 
     // If this memory type is fastmem-compatible, return the base address

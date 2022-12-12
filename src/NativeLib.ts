@@ -1,8 +1,14 @@
 export const API_VERSION = 1;
 
-interface NativeLib {
-  init: () => number
+export interface NativeLib {
+  init: (refresh: (state: object) => void) => number
   finalize: () => void
+  reset: () => void
+
+  assemble: (code: string) => string | null
 }
 
-export default NativeLib;
+interface IModuleStateRaw {
+  regs: number[]
+}
+export type IModuleState = Readonly<IModuleStateRaw>;

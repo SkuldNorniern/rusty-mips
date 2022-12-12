@@ -570,7 +570,6 @@ fn parse(
     Ok(segs)
 }
 
-#[allow(unused)]
 pub fn assemble(endian: EndianMode, asm: &str) -> Result<Vec<Segment>, AssemblerError> {
     // assemble
     let segments = parse(endian, asm, &None)?;

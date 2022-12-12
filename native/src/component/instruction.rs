@@ -1,5 +1,5 @@
 use super::register_name::RegisterName;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct TypeR {
