@@ -21,35 +21,39 @@ const DisassemblyAlign = styled.div`
 `;
 
 const Status = styled.div`
-  display: flex;
+  margin-left: auto;
   margin-bottom: 1rem;
-`;
-
-const Info = styled.div`
-  display: block;
-  margin-right: auto;
 `;
 
 const DisassemblyPage = (): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
+  const [scrollIntoView, setScrollIntoView] = React.useState(0);
 
   if (!native.initialized) {
     return null;
   }
+
+  const handleStep = (): void => {
+    native.lib.step();
+  };
+
+  const handleScrollIntoView = (): void => {
+    setScrollIntoView(prev => (prev + 1) & 0xffff);
+  };
 
   return (
     <Root>
       <Registers />
       <DisassemblyAlign>
         <Status>
-          <Info>{native.state.running ? '실행중' : '정지됨'}</Info>
           <ButtonGroup>
             <Button variant="success">▶ 실행</Button>
             <Button variant="danger">■ 정지</Button>
-            <Button variant="primary">→ 스텝</Button>
+            <Button variant="primary" onClick={handleStep}>→ 스텝</Button>
+            <Button variant="secondary" onClick={handleScrollIntoView}>스크롤 초기화</Button>
           </ButtonGroup>
         </Status>
-        <Disassembly />
+        <Disassembly scrollIntoView={scrollIntoView} />
       </DisassemblyAlign>
       <MemoryViewer />
     </Root>

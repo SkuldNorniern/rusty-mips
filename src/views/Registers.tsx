@@ -83,7 +83,7 @@ const Registers = (): JSX.Element | null => {
   const onSelect = (idx: number, key: any): void => {
     switch (key) {
       case 'edit':
-        setEditRegisterDialogIndex((prev) => (prev === -1 ? idx : prev));
+        setEditRegisterDialogIndex((prev) => (prev <= 0 ? idx : prev));
         break;
       case 'viewBin':
         setFormat('bin');
@@ -105,7 +105,7 @@ const Registers = (): JSX.Element | null => {
         regIndex={editRegisterDialogIndex}
         onHide={closeEditRegisterDialog}
         onSet={(idx, value) => native.lib.editRegister(idx, value)} />
-      <Card style={{ display: 'inline-block' }}>
+      <Card style={{ display: 'inline-block', overflowY: 'auto' }}>
         <RootTable>
             {native.state.regs.map((val, idx) => (
               <Dropdown key={idx} onSelect={onSelect.bind(null, idx)}>

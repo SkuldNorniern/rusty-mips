@@ -4,6 +4,10 @@ import { Button, Card } from 'react-bootstrap';
 import styled from '@emotion/styled';
 import RadixValue from '../components/RadixValue';
 
+interface Props {
+  scrollIntoView: number
+}
+
 const Root = styled.div`
   margin: .5rem;
   line-height: 1.2;
@@ -17,7 +21,7 @@ const Value = styled.span`
   color: blue;
 `;
 
-export const Disassembly = (): JSX.Element | null => {
+export const Disassembly = ({ scrollIntoView }: Props): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
 
   React.useEffect(() => {
@@ -25,10 +29,10 @@ export const Disassembly = (): JSX.Element | null => {
       const addr = native.state.pc.toString();
       const elem = document.getElementById(`disasm-row-${addr}`);
       if (elem != null) {
-        elem.scrollIntoView();
+        elem.scrollIntoView({ block: 'center' });
       }
     }
-  }, [native.initialized ? native.state.pc : null]);
+  }, [native.initialized, native.state.pc, scrollIntoView]);
 
   if (!native.initialized) {
     return null;

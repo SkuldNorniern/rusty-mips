@@ -495,7 +495,7 @@ mod test {
             sw $s1, 0($sp)
             or $s0, $a0, $zero
             ori $v0, $zero, 1 # return value for terminal condition
-			slti $t0, $16, 3
+            slti $t0, $16, 3
             bne $t0, $0, fibonacciExit # check terminal condition
             addi $a0, $s0, -1 # set args for recursive call to f(n-1)
             jal fibonacci

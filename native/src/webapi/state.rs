@@ -65,6 +65,20 @@ impl State {
         mem.read_into_slice(addr, output);
     }
 
+    pub fn step(&mut self) -> Result<(), String> {
+        if self.inner.interpreter.pc() < 0x00001000 {
+            Ok(())
+        } else {
+            let result = self
+                .inner
+                .interpreter
+                .step()
+                .map_err(|x| format!("{:?}", x));
+            self.notify_all();
+            result
+        }
+    }
+
     fn notify_all(&self) {
         let callback = self.callback.clone();
 
@@ -127,7 +141,7 @@ impl Inner {
         {
             let mut addr = pc & (!0xfff);
             let mut nop_cnt: u32 = 0;
-            while addr > 4096 && nop_cnt < 32 {
+            while addr > 4096 && nop_cnt < 16 {
                 let x = mem.read_u32(addr);
 
                 if x == 0x00000000 || x == 0x00000020 {

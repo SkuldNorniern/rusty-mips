@@ -31,11 +31,46 @@ const ButtonArea = styled.div`
 `;
 
 const defaultValue = `
+# taken from https://gist.github.com/libertylocked/068b118354539a8be992
 .text
 .globl main
-
 main:
-  jr $ra
+    # Calculate fibonacci upto this number (7)
+    ori $a0, $0, 7
+    or $s0, $ra, $zero
+    jal fibonacci
+
+    # Now we have the answer in $v0
+    # NOP here so you can check out register pane
+    add $0, $0, $0
+
+    or $ra, $s0, $zero
+    # Terminate the program
+    jr $ra
+fibonacci:
+    # Prologue
+    addi $sp, $sp, -12
+    sw $ra, 8($sp)
+    sw $s0, 4($sp)
+    sw $s1, 0($sp)
+    or $s0, $a0, $zero
+    ori $v0, $zero, 1 # return value for terminal condition
+    slti $t0, $16, 3
+    bne $t0, $0, fibonacciExit # check terminal condition
+    addi $a0, $s0, -1 # set args for recursive call to f(n-1)
+    jal fibonacci
+    or $s1, $v0, $zero # store result of f(n-1) to s1
+    addi $a0, $s0, -2 # set args for recursive call to f(n-2)
+    jal fibonacci
+    add $v0, $s1, $v0 # add result of f(n-1) to it
+ fibonacciExit:
+    # Epilogue
+    lw $ra, 8($sp)
+    lw $s0, 4($sp)
+    lw $s1, 0($sp)
+    addi $sp, $sp, 12
+    jr $ra
+    ## End of function fibonacci
 `;
 
 const AssemblyPage = (): JSX.Element => {

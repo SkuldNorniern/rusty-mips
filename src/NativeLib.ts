@@ -8,6 +8,7 @@ export interface NativeLib {
   assemble: (code: string) => string | null
   editRegister: (idx: number, value: number) => void
   readMemory: (pageIdx: number, dst: Uint8Array) => boolean
+  step: () => undefined
 }
 
 interface IDisassembly {

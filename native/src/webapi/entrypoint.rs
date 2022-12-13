@@ -80,6 +80,14 @@ fn read_memory(mut cx: FunctionContext) -> JsResult<JsBoolean> {
     Ok(cx.boolean(true))
 }
 
+fn step(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let mut state = take_state(&mut cx)?;
+    if let Err(e) = state.step() {
+        log_console(&mut cx, e);
+    }
+    Ok(cx.undefined())
+}
+
 pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("init", init)?;
     cx.export_function("finalize", finalize)?;
@@ -87,5 +95,6 @@ pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("assemble", assemble)?;
     cx.export_function("editRegister", edit_register)?;
     cx.export_function("readMemory", read_memory)?;
+    cx.export_function("step", step)?;
     Ok(())
 }
