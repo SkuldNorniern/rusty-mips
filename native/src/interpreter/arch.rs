@@ -18,7 +18,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new(mem: Box<dyn Memory>) -> Self {
         let mut reg = [0; 32];
-        reg[0] = 0x00400000; // pc
+        reg[0] = 0x00400024; // pc
         reg[28] = 0x10008000; // gp
         reg[29] = 0x7ffffe40; // sp
 

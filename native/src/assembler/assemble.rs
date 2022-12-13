@@ -437,7 +437,7 @@ fn parse(
     const DATA_SEGMENT: RangeInclusive<u32> = 0x10000000..=0x7fffffff;
 
     let mut next_data_addr = 0x10000000;
-    let mut next_text_addr = 0x00400000;
+    let mut next_text_addr = 0x00400024;
 
     for line_raw in asm.lines() {
         let line = line_raw.trim().to_ascii_lowercase();
