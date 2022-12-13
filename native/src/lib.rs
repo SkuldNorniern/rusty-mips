@@ -2,7 +2,7 @@ mod architecture;
 mod assembler;
 mod component;
 mod disassembler;
-mod interpreter;
+mod executor;
 mod memory;
 mod webapi;
 

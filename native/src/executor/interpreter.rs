@@ -1,7 +1,6 @@
 use crate::component::{Instruction, RegisterName, TypeI};
-use crate::interpreter::error::{
-    ArithmeticOverflowSnafu, InterpreterError, InvalidInstructionSnafu,
-};
+use crate::executor::error::*;
+use crate::executor::Arch;
 use crate::memory::Memory;
 
 fn branch_offset(x: TypeI) -> u32 {
@@ -10,64 +9,31 @@ fn branch_offset(x: TypeI) -> u32 {
 
 #[derive(Debug)]
 pub struct Interpreter {
-    // reg[0] is pc
-    reg: [u32; 32],
-    mem: Box<dyn Memory>,
+    arch: Arch,
 }
 
 impl Interpreter {
+    pub fn as_arch(&self) -> &Arch {
+        &self.arch
+    }
+
+    pub fn as_arch_mut(&mut self) -> &mut Arch {
+        &mut self.arch
+    }
+
     pub fn new(mem: Box<dyn Memory>) -> Self {
         let mut reg = [0; 32];
         reg[0] = 0x00400024; // pc
         reg[28] = 0x10008000; // gp
         reg[29] = 0x7ffffe40; // sp
 
-        Interpreter { reg, mem }
-    }
-
-    pub fn mem(&self) -> &dyn Memory {
-        &*self.mem
-    }
-
-    pub fn mem_mut(&mut self) -> &mut dyn Memory {
-        &mut *self.mem
-    }
-
-    pub fn read_all_reg(&self, dst: &mut [u32]) {
-        assert!(dst.len() >= 32);
-
-        dst[0] = 0;
-        dst[1..32].copy_from_slice(&self.reg[1..]);
-    }
-
-    pub fn pc(&self) -> u32 {
-        self.reg[0]
-    }
-
-    pub fn reg(&self, reg: RegisterName) -> u32 {
-        if reg.num() != 0 {
-            self.reg[reg.num() as usize]
-        } else {
-            0
+        Interpreter {
+            arch: Arch { reg, mem },
         }
     }
 
-    pub fn set_pc(&mut self, val: u32) {
-        self.reg[0] = val;
-    }
-
-    pub fn set_reg(&mut self, reg: RegisterName, val: u32) {
-        if reg.num() != 0 {
-            self.reg[reg.num() as usize] = val;
-        }
-    }
-
-    fn handle_syscall(&mut self) {
-        // do nothing (for now)
-    }
-
-    pub fn step(&mut self) -> Result<(), InterpreterError> {
-        let ins = Instruction::decode(self.mem.read_u32(self.pc()));
+    pub fn step(&mut self) -> Result<(), ExecuteError> {
+        let ins = Instruction::decode(self.arch.mem.read_u32(self.arch.pc()));
 
         if let Some(x) = ins.as_invalid() {
             return InvalidInstructionSnafu { ins: x }.fail();
@@ -76,10 +42,22 @@ impl Interpreter {
         self.execute(ins)
     }
 
-    fn execute(&mut self, ins: Instruction) -> Result<(), InterpreterError> {
+    fn reg(&self, reg: RegisterName) -> u32 {
+        self.arch.reg(reg)
+    }
+
+    fn set_reg(&mut self, reg: RegisterName, val: u32) {
+        self.arch.set_reg(reg, val)
+    }
+
+    fn handle_syscall(&mut self) {
+        // do nothing (for now)
+    }
+
+    fn execute(&mut self, ins: Instruction) -> Result<(), ExecuteError> {
         use Instruction::*;
 
-        let mut pc = self.pc() + 4;
+        let mut pc = self.arch.pc() + 4;
 
         match ins {
             add(x) => match i32::checked_add(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
@@ -221,35 +199,35 @@ impl Interpreter {
             }
             lb(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.set_reg(x.rt, self.mem.read_u8(addr) as i8 as i32 as u32);
+                self.set_reg(x.rt, self.arch.mem.read_u8(addr) as i8 as i32 as u32);
             }
             lbu(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.set_reg(x.rt, self.mem.read_u8(addr) as u32);
+                self.set_reg(x.rt, self.arch.mem.read_u8(addr) as u32);
             }
             lh(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.set_reg(x.rt, self.mem.read_u16(addr) as i16 as i32 as u32);
+                self.set_reg(x.rt, self.arch.mem.read_u16(addr) as i16 as i32 as u32);
             }
             lhu(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.set_reg(x.rt, self.mem.read_u16(addr) as u32);
+                self.set_reg(x.rt, self.arch.mem.read_u16(addr) as u32);
             }
             lw(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.set_reg(x.rt, self.mem.read_u32(addr));
+                self.set_reg(x.rt, self.arch.mem.read_u32(addr));
             }
             sb(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.mem.write_u8(addr, self.reg(x.rt) as u8);
+                self.arch.mem.write_u8(addr, self.reg(x.rt) as u8);
             }
             sh(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.mem.write_u16(addr, self.reg(x.rt) as u16);
+                self.arch.mem.write_u16(addr, self.reg(x.rt) as u16);
             }
             sw(x) => {
                 let addr = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
-                self.mem.write_u32(addr, self.reg(x.rt));
+                self.arch.mem.write_u32(addr, self.reg(x.rt));
             }
             j(x) => {
                 let addr = (pc & 0xf000_0000) | ((x.target & 0x3ff_ffff) << 2);
@@ -276,7 +254,7 @@ impl Interpreter {
             }
         }
 
-        self.set_pc(pc);
+        self.arch.set_pc(pc);
         Ok(())
     }
 }
@@ -287,7 +265,7 @@ mod test {
     use crate::assembler::assemble;
     use crate::memory::{create_memory, EndianMode};
 
-    const TEXT_ADDR: u32 = 0x00400000;
+    const TEXT_ADDR: u32 = 0x00400024;
 
     fn init_state(asm: &str) -> Interpreter {
         let segments = assemble(EndianMode::native(), asm).unwrap();
@@ -305,46 +283,46 @@ mod test {
     #[test]
     fn add() {
         let mut state = init_state(".text\nadd $18, $16, $17\nadd $18, $19, $20");
-        state.reg[16] = 1;
-        state.reg[17] = 2;
+        state.arch.reg[16] = 1;
+        state.arch.reg[17] = 2;
         state.step().unwrap();
-        assert_eq!(state.reg[18], 3);
+        assert_eq!(state.arch.reg[18], 3);
 
-        state.reg[19] = i32::MAX as u32;
-        state.reg[20] = 1;
+        state.arch.reg[19] = i32::MAX as u32;
+        state.arch.reg[20] = 1;
         state.step().unwrap_err(); //TODO: Should I check if it is InterpreterError::ArithmeticOverflow?
-        assert_eq!(state.reg[18], 3);
+        assert_eq!(state.arch.reg[18], 3);
     }
 
     #[test]
     fn sub() {
         let mut state =
             init_state(".text\nsub $18, $16, $17\nsub $18, $16, $17\nsub $18, $16, $17");
-        state.reg[16] = 3;
-        state.reg[17] = 2;
+        state.arch.reg[16] = 3;
+        state.arch.reg[17] = 2;
         state.step().unwrap();
-        assert_eq!(state.reg[18], 1);
+        assert_eq!(state.arch.reg[18], 1);
 
-        state.reg[16] = 1;
-        state.reg[17] = 2;
+        state.arch.reg[16] = 1;
+        state.arch.reg[17] = 2;
         state.step().unwrap();
-        assert_eq!(state.reg[18], -1_i32 as u32);
+        assert_eq!(state.arch.reg[18], -1_i32 as u32);
 
-        state.reg[16] = i32::MIN as u32;
-        state.reg[17] = 1;
+        state.arch.reg[16] = i32::MIN as u32;
+        state.arch.reg[17] = 1;
         state.step().unwrap_err(); //TODO: Should I check if it is InterpreterError::ArithmeticOverflow?
-        assert_eq!(state.reg[18], -1_i32 as u32);
+        assert_eq!(state.arch.reg[18], -1_i32 as u32);
     }
 
     #[test]
     fn and_or() {
         let mut state = init_state(".text\nand $18, $16, $17\nor $18, $16, $17");
-        state.reg[16] = 13;
-        state.reg[17] = 9;
+        state.arch.reg[16] = 13;
+        state.arch.reg[17] = 9;
         state.step().unwrap();
-        assert_eq!(state.reg[18], 13 & 9);
+        assert_eq!(state.arch.reg[18], 13 & 9);
         state.step().unwrap();
-        assert_eq!(state.reg[18], 13 | 9);
+        assert_eq!(state.arch.reg[18], 13 | 9);
     }
 
     #[test]
@@ -352,51 +330,51 @@ mod test {
         let mut state = init_state(
             ".text\nslt $18, $16, $17\nslt $18, $16, $17\nslt $18, $16, $17\nslt $18, $16, $17",
         );
-        state.reg[16] = 1;
-        state.reg[17] = 2;
+        state.arch.reg[16] = 1;
+        state.arch.reg[17] = 2;
         state.step().unwrap();
-        assert_eq!(state.reg[18], 1);
+        assert_eq!(state.arch.reg[18], 1);
 
-        state.reg[16] = 2;
-        state.reg[17] = 1;
+        state.arch.reg[16] = 2;
+        state.arch.reg[17] = 1;
         state.step().unwrap();
-        assert_eq!(state.reg[18], 0);
+        assert_eq!(state.arch.reg[18], 0);
 
-        state.reg[16] = 1;
-        state.reg[17] = -1_i32 as u32;
+        state.arch.reg[16] = 1;
+        state.arch.reg[17] = -1_i32 as u32;
         state.step().unwrap();
-        assert_eq!(state.reg[18], 0);
+        assert_eq!(state.arch.reg[18], 0);
 
-        state.reg[16] = -2_i32 as u32;
-        state.reg[17] = -1_i32 as u32;
+        state.arch.reg[16] = -2_i32 as u32;
+        state.arch.reg[17] = -1_i32 as u32;
         state.step().unwrap();
-        assert_eq!(state.reg[18], 1);
+        assert_eq!(state.arch.reg[18], 1);
     }
 
     #[test]
     fn mem() {
         let mut state = init_state(".data 0x10008000\n.word -1234, 1234\n.text\nlw $16, 0($gp)\nlw $16, 4($gp)\nadd $16, $16, $17\nsw $16, 8($gp)");
-        assert_eq!(state.mem.read_u32(0x10008004), 1234);
-        state.reg[17] = 1;
+        assert_eq!(state.arch.mem.read_u32(0x10008004), 1234);
+        state.arch.reg[17] = 1;
 
         state.step().unwrap();
-        assert_eq!(state.reg[16], -1234_i32 as u32);
+        assert_eq!(state.arch.reg[16], -1234_i32 as u32);
 
         state.step().unwrap();
-        assert_eq!(state.reg[16], 1234);
+        assert_eq!(state.arch.reg[16], 1234);
 
         state.step().unwrap();
-        assert_eq!(state.reg[16], 1235);
+        assert_eq!(state.arch.reg[16], 1235);
 
         state.step().unwrap();
-        assert_eq!(state.mem.read_u32(0x10008008), 1235);
+        assert_eq!(state.arch.mem.read_u32(0x10008008), 1235);
     }
 
     #[test]
     fn jump() {
         let mut state = init_state(".text\nj 0x00001234");
         state.step().unwrap();
-        assert_eq!(state.pc(), 0x1234);
+        assert_eq!(state.arch.pc(), 0x1234);
     }
 
     #[test]
@@ -404,16 +382,16 @@ mod test {
         let mut state = init_state(
             ".text\nstart:\nadd $16, $16, $17\nbeq $16, $0, fin\nj start\nfin:\nj 0x00001234",
         );
-        state.reg[16] = 3;
-        state.reg[17] = -1_i32 as u32;
+        state.arch.reg[16] = 3;
+        state.arch.reg[17] = -1_i32 as u32;
 
         let expected_pc = [0, 4, 8, 0, 4, 8, 0, 4, 12];
 
         for pc in expected_pc {
-            assert_eq!(pc + TEXT_ADDR, state.pc());
+            assert_eq!(pc + TEXT_ADDR, state.arch.pc());
             state.step().unwrap();
         }
-        assert_eq!(state.pc(), 0x1234);
+        assert_eq!(state.arch.pc(), 0x1234);
     }
 
     #[test]
@@ -439,9 +417,9 @@ mod test {
             sltu $11, $17, $16",
         );
 
-        state.reg[16] = 1234;
-        state.reg[17] = 4321;
-        state.reg[18] = 2;
+        state.arch.reg[16] = 1234;
+        state.arch.reg[17] = 4321;
+        state.arch.reg[18] = 2;
 
         let expected_output = [
             0x15b3,
@@ -465,13 +443,13 @@ mod test {
 
         for output in expected_output {
             state.step().unwrap();
-            assert_eq!(state.reg[16], output);
+            assert_eq!(state.arch.reg[16], output);
         }
 
-        assert_eq!(state.reg[8], 1);
-        assert_eq!(state.reg[9], 0);
-        assert_eq!(state.reg[10], 1);
-        assert_eq!(state.reg[11], 0);
+        assert_eq!(state.arch.reg[8], 1);
+        assert_eq!(state.arch.reg[9], 0);
+        assert_eq!(state.arch.reg[10], 1);
+        assert_eq!(state.arch.reg[11], 0);
     }
 
     #[test]
@@ -513,9 +491,9 @@ mod test {
             ## End of function fibonacci",
         );
 
-        while state.pc() != 0 {
+        while state.arch.pc() != 0 {
             state.step().unwrap();
         }
-        assert_eq!(state.reg[2], 55);
+        assert_eq!(state.arch.reg[2], 55);
     }
 }

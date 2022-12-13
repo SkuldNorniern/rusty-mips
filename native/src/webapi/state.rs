@@ -1,7 +1,7 @@
 use crate::assembler::assemble;
 use crate::component::RegisterName;
 use crate::disassembler::disassemble;
-use crate::interpreter::Interpreter;
+use crate::executor::{Executor, Interpreter, Jit};
 use crate::memory::{create_empty_memory, create_memory, EndianMode};
 use neon::prelude::*;
 use std::collections::HashMap;
@@ -17,14 +17,16 @@ pub struct State {
 #[derive(Debug)]
 struct Inner {
     clean_after_reset: bool,
-    interpreter: Interpreter,
+    exec: Executor,
 }
 
 impl Default for Inner {
     fn default() -> Self {
+        let interpreter = Interpreter::new(create_empty_memory(EndianMode::native()));
+
         Inner {
             clean_after_reset: true,
-            interpreter: Interpreter::new(create_empty_memory(EndianMode::native())),
+            exec: Executor::ExInterpreter(interpreter),
         }
     }
 }
@@ -48,14 +50,20 @@ impl State {
     pub fn assemble(&mut self, code: &str, endian: EndianMode) -> Result<(), String> {
         let segs = assemble(endian, code).map_err(|e| e.to_string())?;
         let mem = create_memory(endian, &segs);
-        self.inner.interpreter = Interpreter::new(mem);
+
+        if endian == EndianMode::native() {
+            self.inner.exec = Executor::ExJit(Jit::new(mem));
+        } else {
+            self.inner.exec = Executor::ExInterpreter(Interpreter::new(mem));
+        }
+
         self.notify_all();
         Ok(())
     }
 
     pub fn edit_register(&mut self, r: RegisterName, val: u32) -> Result<(), ()> {
         self.inner.clean_after_reset = false;
-        self.inner.interpreter.set_reg(r, val);
+        self.inner.exec.as_arch_mut().set_reg(r, val);
 
         self.notify_all();
 
@@ -64,7 +72,7 @@ impl State {
 
     pub fn read_memory(&self, page_idx: u32, output: &mut [u8]) {
         let addr = page_idx * 4096;
-        let mem = self.inner.interpreter.mem();
+        let mem = self.inner.exec.as_arch().mem();
         mem.read_into_slice(addr, output);
     }
 
@@ -77,13 +85,10 @@ impl State {
 
     pub fn step_silent(&mut self) -> Result<(), String> {
         self.inner.clean_after_reset = false;
-        if self.inner.interpreter.pc() < 0x00001000 {
+        if self.inner.exec.as_arch().pc() < 0x00001000 {
             Ok(())
         } else {
-            self.inner
-                .interpreter
-                .step()
-                .map_err(|x| format!("{:?}", x))
+            self.inner.exec.step().map_err(|x| format!("{:?}", x))
         }
     }
 
@@ -144,17 +149,17 @@ impl State {
 impl Inner {
     fn capture_regs(&self) -> [u32; 32] {
         let mut ret = [0; 32];
-        self.interpreter.read_all_reg(&mut ret);
+        self.exec.as_arch().read_all_reg(&mut ret);
         ret
     }
 
     fn capture_pc(&self) -> u32 {
-        self.interpreter.pc()
+        self.exec.as_arch().pc()
     }
 
     fn capture_disasm(&self) -> HashMap<u32, (u32, String)> {
-        let pc = self.interpreter.pc();
-        let mem = self.interpreter.mem();
+        let pc = self.exec.as_arch().pc();
+        let mem = self.exec.as_arch().mem();
         let mut mapping = HashMap::new();
 
         /* walk back */

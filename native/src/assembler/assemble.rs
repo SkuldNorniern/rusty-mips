@@ -635,7 +635,7 @@ mod test {
         let code = ".text\nadd $0, $4, $12\nsub $2, $s0, $zero";
         let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
-        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].base_addr, 0x00400024);
         assert_eq!(segs[0].data.len(), 8);
         assert!(segs[0].labels().is_empty());
 
@@ -665,7 +665,7 @@ mod test {
         let code = ".text\nlw $3, 1234($5)\nsw $s1, -12($gp)\nlw $7, 0x7fff($4)";
         let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
-        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].base_addr, 0x00400024);
         assert_eq!(segs[0].data.len(), 12);
         assert!(segs[0].labels().is_empty());
 
@@ -692,7 +692,7 @@ mod test {
         let code = ".text\nadd $0, $0, $0\nbeq $4, $zero, 92";
         let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
-        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].base_addr, 0x00400024);
         assert_eq!(segs[0].data.len(), 8);
         assert!(segs[0].labels().is_empty());
 
@@ -707,7 +707,7 @@ mod test {
         let code = ".text\nbeq $0, $0, fin\n.L1:\nbeq $s0, $28, .L1\nbeq $0, $28, fin\nfin:\nbeq $10, $11, .L1";
         let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
-        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].base_addr, 0x00400024);
         assert_eq!(segs[0].data.len(), 16);
         assert_eq!(segs[0].labels().len(), 2);
 
@@ -749,7 +749,7 @@ mod test {
 
         let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
-        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].base_addr, 0x00400024);
         assert_eq!(segs[0].data.len(), 32);
         assert!(segs[0].labels().is_empty());
 
@@ -796,7 +796,7 @@ mod test {
 
         let segs = assemble(*NE, code).unwrap();
         assert_eq!(segs.len(), 1);
-        assert_eq!(segs[0].base_addr, 0x00400000);
+        assert_eq!(segs[0].base_addr, 0x00400024);
         assert_eq!(segs[0].data.len(), 24);
         assert!(segs[0].labels().is_empty());
 

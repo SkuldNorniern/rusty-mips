@@ -25,7 +25,7 @@ impl Processor {
     pub fn new(_asm: &str) -> Processor {
         let insts = assemble(EndianMode::native(), _asm).unwrap();
         Processor {
-            pc: 0x00400000,
+            pc: 0x00400024,
             hi: 0x0,
             lo: 0x0,
             instructions: insts.clone(),
@@ -77,7 +77,7 @@ mod tests {
     fn processor_pc_value() {
         let mut proc = Processor::new(".text\nadd $18, $16, $17");
         proc.next();
-        assert_eq!(proc.pc, 0x00400004);
+        assert_eq!(proc.pc, 0x00400028);
     }
     #[test]
     fn processor_cycle_1_inst() {
