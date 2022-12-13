@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 
 mod entrypoint;
+mod looper;
 mod state;
 mod util;
 

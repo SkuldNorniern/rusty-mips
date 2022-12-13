@@ -66,20 +66,32 @@ impl State {
     }
 
     pub fn step(&mut self) -> Result<(), String> {
+        let result = self.step_silent();
+        self.notify_all();
+        result
+    }
+
+    pub fn step_silent(&mut self) -> Result<(), String> {
         if self.inner.interpreter.pc() < 0x00001000 {
             Ok(())
         } else {
-            let result = self
-                .inner
+            self.inner
                 .interpreter
                 .step()
-                .map_err(|x| format!("{:?}", x));
-            self.notify_all();
-            result
+                .map_err(|x| format!("{:?}", x))
         }
     }
 
-    fn notify_all(&self) {
+    pub fn run(&self) {
+        super::looper::start();
+    }
+
+    pub fn stop(&self) {
+        super::looper::stop();
+        self.notify_all()
+    }
+
+    pub fn notify_all(&self) {
         let callback = self.callback.clone();
 
         let regs = self.inner.capture_regs();
@@ -177,7 +189,7 @@ impl Inner {
     }
 
     fn capture_running(&self) -> bool {
-        false
+        super::looper::is_running()
     }
 }
 

@@ -33,6 +33,14 @@ const DisassemblyPage = (): JSX.Element | null => {
     return null;
   }
 
+  const handleRun = (): void => {
+    native.lib.run();
+  };
+
+  const handleStop = (): void => {
+    native.lib.stop();
+  };
+
   const handleStep = (): void => {
     native.lib.step();
   };
@@ -47,9 +55,9 @@ const DisassemblyPage = (): JSX.Element | null => {
       <DisassemblyAlign>
         <Status>
           <ButtonGroup>
-            <Button variant="success">▶ 실행</Button>
-            <Button variant="danger">■ 정지</Button>
-            <Button variant="primary" onClick={handleStep}>→ 스텝</Button>
+            <Button variant="success" disabled={native.state.running} onClick={handleRun}>▶ 실행</Button>
+            <Button variant="danger" disabled={!native.state.running} onClick={handleStop}>■ 정지</Button>
+            <Button variant="primary" disabled={native.state.running} onClick={handleStep}>→ 스텝</Button>
             <Button variant="secondary" onClick={handleScrollIntoView}>스크롤 초기화</Button>
           </ButtonGroup>
         </Status>

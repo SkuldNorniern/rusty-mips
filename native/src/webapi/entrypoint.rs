@@ -1,20 +1,11 @@
 use super::state::State;
 use super::util::take_state;
 use crate::component::RegisterName;
+use crate::webapi::util::log_console;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
 
 const API_VERSION: u32 = 1;
-
-fn log_console<'c, C: Context<'c>>(cx: &mut C, msg: impl AsRef<str>) {
-    let msg = msg.as_ref();
-    let _ = cx
-        .global()
-        .get(cx, "console")
-        .and_then(|x: Handle<JsObject>| x.get(cx, "log"))
-        .and_then(|x: Handle<JsFunction>| x.call_with(cx).arg(cx.string(msg)).apply(cx))
-        .map(|_: Handle<JsUndefined>| ());
-}
 
 fn init(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
@@ -88,6 +79,18 @@ fn step(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     Ok(cx.undefined())
 }
 
+fn run(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let state = take_state(&mut cx)?;
+    state.run();
+    Ok(cx.undefined())
+}
+
+fn stop(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let state = take_state(&mut cx)?;
+    state.stop();
+    Ok(cx.undefined())
+}
+
 pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("init", init)?;
     cx.export_function("finalize", finalize)?;
@@ -96,5 +99,7 @@ pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("editRegister", edit_register)?;
     cx.export_function("readMemory", read_memory)?;
     cx.export_function("step", step)?;
+    cx.export_function("run", run)?;
+    cx.export_function("stop", stop)?;
     Ok(())
 }
