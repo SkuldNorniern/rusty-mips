@@ -31,7 +31,10 @@ const ButtonArea = styled.div`
 `;
 
 const defaultValue = `
-# taken from https://gist.github.com/libertylocked/068b118354539a8be992
+# Recursive fibonacci calculator
+# Function signature: int fibonacci(int)
+# Also saves the result into $gp as an int array (e.g. $gp = fibonacci(2), $gp + 4 = fibonacci(3), ...)
+# Modified from https://gist.github.com/libertylocked/068b118354539a8be992
 .text
 .globl main
 main:
@@ -64,6 +67,12 @@ fibonacci:
     jal fibonacci
     add $v0, $s1, $v0 # add result of f(n-1) to it
  fibonacciExit:
+    # Save value to memory
+    add $t0, $s0, $s0
+    add $t0, $t0, $t0  # multiply by 4
+    addi $t0, $t0, -8  # align that fibonacci(2) ==> $gp
+    add $t0, $gp, $t0
+    sw $sp, 0($t0)
     # Epilogue
     lw $ra, 8($sp)
     lw $s0, 4($sp)

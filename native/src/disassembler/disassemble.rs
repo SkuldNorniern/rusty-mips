@@ -61,7 +61,12 @@ fn format_type_jump_reg_linked(mnemonic: &str, x: TypeR) -> String {
 }
 
 pub fn disassemble(ins: u32) -> String {
+    if ins == 0 {
+        return "nop".into();
+    }
+
     let decoded = Instruction::decode(ins);
+
     match decoded {
         Instruction::add(x) => format_type_r("add", x),
         Instruction::addu(x) => format_type_r("addu", x),
