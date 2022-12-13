@@ -70,7 +70,7 @@ const DisassemblyPage = (): JSX.Element | null => {
       </VerticalAlign>
       <VerticalAlign>
         <Title>데이터 섹션</Title>
-        <MemoryViewer initialAddr={0x10000000} />
+        <MemoryViewer initialAddr={0x10008000} />
         <Title>스택</Title>
         <MemoryViewer initialAddr={0x7ffffe40} />
       </VerticalAlign>

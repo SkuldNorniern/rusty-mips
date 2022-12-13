@@ -72,7 +72,7 @@ fibonacci:
     add $t0, $t0, $t0  # multiply by 4
     addi $t0, $t0, -8  # align that fibonacci(2) ==> $gp
     add $t0, $gp, $t0
-    sw $sp, 0($t0)
+    sw $v0, 0($t0)
     # Epilogue
     lw $ra, 8($sp)
     lw $s0, 4($sp)
