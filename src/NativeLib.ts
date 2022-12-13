@@ -10,8 +10,15 @@ export interface NativeLib {
   readMemory: (pageIdx: number, dst: Uint8Array) => boolean
 }
 
+interface IDisassembly {
+  [k: string]: [number, string]
+}
+
 interface IModuleStateRaw {
   regs: number[]
   pc: number
+  running: boolean
+  disasm: IDisassembly
+  disasmList: number[]
 }
 export type IModuleState = Readonly<IModuleStateRaw>;

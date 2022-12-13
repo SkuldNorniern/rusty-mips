@@ -55,3 +55,7 @@ html, body, #root {
 .fullscreen-tab-root > .tab-content > .tab-pane.show {
     height: 100%;
 }
+
+.highlighted-next {
+    background-color: #fcc;
+}

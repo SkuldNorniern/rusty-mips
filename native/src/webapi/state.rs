@@ -1,8 +1,10 @@
 use crate::assembler::assemble;
 use crate::component::RegisterName;
+use crate::disassembler::disassemble;
 use crate::interpreter::Interpreter;
 use crate::memory::{create_empty_memory, create_memory, EndianMode};
 use neon::prelude::*;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -68,13 +70,33 @@ impl State {
 
         let regs = self.inner.capture_regs();
         let pc = self.inner.capture_pc();
+        let disasm_mapping = self.inner.capture_disasm();
+        let running = self.inner.capture_running();
 
         self.channel.send(move |mut cx| {
-            let regs = js_array_numbers(&mut cx, &regs)?;
+            let regs = js_array_numbers(&mut cx, regs.iter())?;
             let pc = cx.number(pc);
+
+            let disasm = cx.empty_object();
+            for (k, v) in disasm_mapping.iter() {
+                let number = cx.number(v.0);
+                let value = cx.string(&v.1);
+                let tuple = cx.empty_array();
+                tuple.set(&mut cx, 0, number)?;
+                tuple.set(&mut cx, 1, value)?;
+                disasm.set(&mut cx, *k, tuple)?;
+            }
+            let mut disasm_list = disasm_mapping.keys().copied().collect::<Vec<u32>>();
+            disasm_list.sort();
+            let disasm_list = js_array_numbers(&mut cx, disasm_list.iter())?;
+            let running = cx.boolean(running);
+
             let obj = cx.empty_object();
             obj.set(&mut cx, "regs", regs)?;
             obj.set(&mut cx, "pc", pc)?;
+            obj.set(&mut cx, "disasm", disasm)?;
+            obj.set(&mut cx, "disasmList", disasm_list)?;
+            obj.set(&mut cx, "running", running)?;
 
             callback
                 .to_inner(&mut cx)
@@ -95,12 +117,65 @@ impl Inner {
     fn capture_pc(&self) -> u32 {
         self.interpreter.pc()
     }
+
+    fn capture_disasm(&self) -> HashMap<u32, (u32, String)> {
+        let pc = self.interpreter.pc();
+        let mem = self.interpreter.mem();
+        let mut mapping = HashMap::new();
+
+        /* walk back */
+        {
+            let mut addr = pc & (!0xfff);
+            let mut nop_cnt: u32 = 0;
+            while addr > 4096 && nop_cnt < 32 {
+                let x = mem.read_u32(addr);
+
+                if x == 0x00000000 || x == 0x00000020 {
+                    nop_cnt += 1;
+                } else {
+                    nop_cnt = 0;
+                }
+
+                mapping.insert(addr, (x, disassemble(x)));
+                addr -= 4;
+            }
+        }
+
+        /* walk forward */
+        {
+            let mut addr = pc & (!0xfff);
+            let mut nop_cnt: u32 = 0;
+            while addr < 0x1000_0000 && nop_cnt < 256 {
+                let x = mem.read_u32(addr);
+
+                if x == 0x00000000 || x == 0x00000020 {
+                    nop_cnt += 1;
+                } else {
+                    nop_cnt = 0;
+                }
+
+                mapping.insert(addr, (x, disassemble(x)));
+                addr += 4;
+            }
+        }
+
+        mapping
+    }
+
+    fn capture_running(&self) -> bool {
+        false
+    }
 }
 
-fn js_array_numbers<'a, C: Context<'a>>(cx: &mut C, arr: &[u32]) -> JsResult<'a, JsArray> {
-    let a = JsArray::new(cx, arr.len() as u32);
+fn js_array_numbers<'a, 'b, C: Context<'a>>(
+    cx: &mut C,
+    iter: impl Iterator<Item = &'b u32>,
+) -> JsResult<'a, JsArray> {
+    let size_hint = iter.size_hint();
+    let len = size_hint.1.unwrap_or(size_hint.0);
+    let a = JsArray::new(cx, len as u32);
 
-    for (i, s) in arr.iter().enumerate() {
+    for (i, s) in iter.enumerate() {
         let v = cx.number(*s);
         a.set(cx, i as u32, v)?;
     }
