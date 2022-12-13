@@ -46,15 +46,19 @@ const numberToChar = (val: number): string => {
   }
 };
 
-interface IState {
-  pageAddr: number
+interface IProps {
+  initialAddr: number
 }
 
-export const MemoryViewer = (): JSX.Element | null => {
+interface IState {
+  pageAddr: number
+  memory?: Uint8Array
+}
+
+export const MemoryViewer = ({ initialAddr }: IProps): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
-  const arr = React.useRef(new Uint8Array(4096));
   const [state, setState] = React.useState<Readonly<IState>>({
-    pageAddr: 0x10000000
+    pageAddr: initialAddr & (~0xfff)
   });
 
   const canGoBack = state.pageAddr > 0;
@@ -62,12 +66,15 @@ export const MemoryViewer = (): JSX.Element | null => {
   const pageIdx = (state.pageAddr / 4096) | 0;
 
   React.useEffect(() => {
-    if (native.initialized && arr.current != null) {
-      native.lib.readMemory(pageIdx, arr.current);
+    if (native.initialized) {
+      const prevArr = state.memory ?? new Uint8Array(4096);
+      const next = native.lib.readMemory(pageIdx, prevArr);
+      setState(prev => ({ ...prev, memory: next }));
     }
-  }, [native, arr, state.pageAddr]);
+  }, [native, state.pageAddr]);
 
-  if (!native.initialized || arr.current == null) {
+  const memory = state.memory;
+  if (!native.initialized || memory == null) {
     return null;
   }
 
@@ -79,7 +86,7 @@ export const MemoryViewer = (): JSX.Element | null => {
   };
 
   const handleGoHome = (): void => {
-    setState(prev => ({ ...prev, pageAddr: 0x10000000 }));
+    setState(prev => ({ ...prev, pageAddr: initialAddr & (~0xfff) }));
   };
 
   const handleGoForward = (): void => {
@@ -90,7 +97,7 @@ export const MemoryViewer = (): JSX.Element | null => {
   };
 
   return (
-    <Card style={{ display: 'inline-block', marginLeft: '1rem', overflowY: 'scroll' }} className="code">
+    <Card style={{ display: 'inline-block', overflowY: 'scroll' }} className="code">
       <Root>
         <Pager>
           <Button variant="secondary" disabled={!canGoBack} onClick={handleGoBack}>← 이전 페이지</Button>
@@ -109,14 +116,14 @@ export const MemoryViewer = (): JSX.Element | null => {
             <Value>
               {rowIndices.map(j => (
                 <React.Fragment key={i * bytesPerRow + j}>
-                  <RadixValue value={arr.current[i * bytesPerRow + j]} format={'hex'} digits={2}/>
+                  <RadixValue value={memory[i * bytesPerRow + j]} format={'hex'} digits={2}/>
                   {j % 4 === 3 ? ' ' : ''}
                 </React.Fragment>
               ))}
             </Value>
             {rowIndices.map(j => (
               <React.Fragment key={i * bytesPerRow + j}>
-                {numberToChar(arr.current[i * bytesPerRow + j])}
+                {numberToChar(memory[i * bytesPerRow + j])}
               </React.Fragment>
             ))}
           </div>

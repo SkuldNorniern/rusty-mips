@@ -13,11 +13,16 @@ const Root = styled.div`
   height: 100%;
 `;
 
-const DisassemblyAlign = styled.div`
+const VerticalAlign = styled.div`
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   margin-left: 1rem;
+`;
+
+const Title = styled.div`
+  text-align: center;
+  margin: .5rem 0;
 `;
 
 const Status = styled.div`
@@ -52,7 +57,7 @@ const DisassemblyPage = (): JSX.Element | null => {
   return (
     <Root>
       <Registers />
-      <DisassemblyAlign>
+      <VerticalAlign>
         <Status>
           <ButtonGroup>
             <Button variant="success" disabled={native.state.running} onClick={handleRun}>▶ 실행</Button>
@@ -62,8 +67,13 @@ const DisassemblyPage = (): JSX.Element | null => {
           </ButtonGroup>
         </Status>
         <Disassembly scrollIntoView={scrollIntoView} />
-      </DisassemblyAlign>
-      <MemoryViewer />
+      </VerticalAlign>
+      <VerticalAlign>
+        <Title>데이터 섹션</Title>
+        <MemoryViewer initialAddr={0x10000000} />
+        <Title>스택</Title>
+        <MemoryViewer initialAddr={0x7ffffe40} />
+      </VerticalAlign>
     </Root>
   );
 };

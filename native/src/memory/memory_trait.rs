@@ -57,7 +57,7 @@ where
         );
 
         unsafe {
-            let src = slice_from_raw_parts(self.fastmem_addr(), output.len());
+            let src = slice_from_raw_parts(self.fastmem_addr().add(addr as usize), output.len());
             output.copy_from_slice(&*src);
         }
     }

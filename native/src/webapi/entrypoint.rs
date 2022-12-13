@@ -57,18 +57,18 @@ fn edit_register(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     Ok(cx.undefined())
 }
 
-fn read_memory(mut cx: FunctionContext) -> JsResult<JsBoolean> {
+fn read_memory(mut cx: FunctionContext) -> JsResult<JsUint8Array> {
     let page_idx = cx.argument::<JsNumber>(0)?.value(&mut cx) as i32;
     let mut dst = cx.argument::<JsUint8Array>(1)?;
     if !(0..1048576).contains(&page_idx) {
-        return Ok(cx.boolean(false));
+        return Ok(dst);
     }
 
     let state = take_state(&mut cx)?;
     let buffer = dst.as_mut_slice(&mut cx);
     state.read_memory(page_idx as u32, buffer);
 
-    Ok(cx.boolean(true))
+    Ok(dst)
 }
 
 fn step(mut cx: FunctionContext) -> JsResult<JsUndefined> {

@@ -7,7 +7,7 @@ export interface NativeLib {
 
   assemble: (code: string) => string | null
   editRegister: (idx: number, value: number) => void
-  readMemory: (pageIdx: number, dst: Uint8Array) => boolean
+  readMemory: (pageIdx: number, dst: Uint8Array) => Uint8Array
   step: () => void
   run: () => void
   stop: () => void

@@ -18,16 +18,6 @@ impl TypeR {
             | (funct as u32)
     }
 
-    pub fn decode(ins: u32) -> Option<(u8, TypeR)> {
-        let opcode = ((ins >> 26) & 0x3f) as u8;
-
-        if opcode == 0 {
-            Some(Self::decode_unchecked(ins))
-        } else {
-            None
-        }
-    }
-
     fn decode_unchecked(ins: u32) -> (u8, TypeR) {
         let rs = ((ins >> 21) & 0x1f) as u8;
         let rt = ((ins >> 16) & 0x1f) as u8;
@@ -62,16 +52,6 @@ impl TypeI {
             | (self.imm as u32)
     }
 
-    pub fn decode(ins: u32) -> Option<(u8, TypeI)> {
-        let opcode = ((ins >> 26) & 0x3f) as u8;
-
-        if opcode != 0 && opcode != 2 && opcode != 3 {
-            Some(Self::decode_unchecked(ins))
-        } else {
-            None
-        }
-    }
-
     fn decode_unchecked(ins: u32) -> (u8, TypeI) {
         let opcode = ((ins >> 26) & 0x3f) as u8;
         let rs = ((ins >> 21) & 0x1f) as u8;
@@ -97,16 +77,6 @@ pub struct TypeJ {
 impl TypeJ {
     pub fn encode(&self, opcode: u8) -> u32 {
         (opcode as u32) << 26 | self.target
-    }
-
-    pub fn decode(ins: u32) -> Option<(u8, TypeJ)> {
-        let opcode = ((ins >> 26) & 0x3f) as u8;
-
-        if opcode == 2 || opcode == 3 {
-            Some(Self::decode_unchecked(ins))
-        } else {
-            None
-        }
     }
 
     fn decode_unchecked(ins: u32) -> (u8, TypeJ) {
