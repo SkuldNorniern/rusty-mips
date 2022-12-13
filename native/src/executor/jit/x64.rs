@@ -61,7 +61,7 @@ impl Jit {
         self.codes.clear();
     }
 
-    fn compile(&mut self, addr_from: u32) -> Result<&CompiledCode, ()> {
+    fn compile(&mut self, _addr_from: u32) -> Result<&CompiledCode, ()> {
         Err(())
     }
 }

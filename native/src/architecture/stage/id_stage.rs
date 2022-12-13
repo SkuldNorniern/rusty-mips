@@ -30,6 +30,6 @@ pub fn id_next(
     id_ex.rt = (_if_id.inst & 0x001F0000) >> 16;
     id_ex.rd = (_if_id.inst & 0x0000F800) >> 11;
     id_ex.imm = _if_id.inst & 0x0000FFFF;
-    
+
     id_ex
 }
