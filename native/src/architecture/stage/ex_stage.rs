@@ -42,5 +42,6 @@ pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pip
     } else {
         ex_mem.rd = _id_ex.rt;
     }
+
     ex_mem
 }

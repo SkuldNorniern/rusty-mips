@@ -18,8 +18,7 @@ pub struct Processor {
     ex_mem: pipes::ExPipe,
     mem_wb: pipes::MemPipe,
     wb: pipes::WbPipe,
-    fwd_unit: units::forward_unit::FwdUnit,
-    cur_line: u32,
+    fwd_unit: units::forward_unit::FwdUnit
 }
 impl Processor {
     pub fn new(_asm: &str) -> Processor {
@@ -36,8 +35,7 @@ impl Processor {
             ex_mem: { pipes::ExPipe::default() },
             mem_wb: { pipes::MemPipe::default() },
             wb: { pipes::WbPipe::default() },
-            fwd_unit: { units::forward_unit::FwdUnit::default() },
-            cur_line: 0,
+            fwd_unit: { units::forward_unit::FwdUnit::default() }
         }
     }
     pub fn next(&mut self) {
@@ -60,13 +58,10 @@ impl Processor {
         self.id_ex =
             stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, self.registers);
         let cur_inst = self.memory.read_u32(self.pc);
-        self.if_id = stage::if_stage::if_next(cur_inst, self.fwd_unit.hazard, self.pc);
-
-        if self.if_id.ran == self.pc {
-            self.cur_line += 1;
-        }
+        let if_tup = stage::if_stage::if_next(cur_inst, self.fwd_unit,&mut self.ex_mem, self.pc);
+        self.if_id = if_tup.0;
+        self.pc = if_tup.1;
         self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id, &mut self.id_ex, self.fwd_unit);
-        self.pc += 4;
     }
 }
 
