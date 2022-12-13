@@ -90,12 +90,31 @@ where
 }
 
 pub fn create_memory(endian: EndianMode, segments: &[Segment]) -> Box<dyn Memory> {
+    create_memory_impl(endian, segments, false)
+}
+
+/// Only for use in unit tests
+pub fn create_memory_fastmem(endian: EndianMode, segments: &[Segment]) -> Box<dyn Memory> {
+    create_memory_impl(endian, segments, true)
+}
+
+fn create_memory_impl(
+    endian: EndianMode,
+    segments: &[Segment],
+    force_fastmem: bool,
+) -> Box<dyn Memory> {
     use super::slowmem::SlowMem;
 
+    if !force_fastmem {
+        cfg_if::cfg_if! {
+            if #[cfg(test)] {
+                return SlowMem::new(endian, segments);
+            }
+        }
+    }
+
     cfg_if::cfg_if! {
-        if #[cfg(test)] {
-            SlowMem::new(endian, segments)
-        } else if #[cfg(windows)] {
+        if #[cfg(windows)] {
             super::fastmem_windows::FastMemWindows::try_new(endian, segments)
                 .map(|x| -> Box<dyn Memory> { x })
                 .unwrap_or_else(|| SlowMem::new(endian, segments))

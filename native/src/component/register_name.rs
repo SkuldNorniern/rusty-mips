@@ -9,6 +9,10 @@ impl RegisterName {
         RegisterName(val)
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+
     pub fn num(&self) -> u8 {
         self.0
     }
