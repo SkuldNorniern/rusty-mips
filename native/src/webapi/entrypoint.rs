@@ -1,6 +1,7 @@
 use super::state::State;
 use super::util::take_state;
 use crate::component::RegisterName;
+use crate::memory::EndianMode;
 use crate::webapi::util::log_console;
 use neon::prelude::*;
 use neon::types::buffer::TypedArray;
@@ -39,7 +40,15 @@ fn reset(mut cx: FunctionContext) -> JsResult<JsUndefined> {
 
 fn assemble(mut cx: FunctionContext) -> JsResult<JsValue> {
     let code = cx.argument::<JsString>(0)?.value(&mut cx);
-    match take_state(&mut cx)?.assemble(&code) {
+    let endian = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let endian = match endian.as_str() {
+        "big" => EndianMode::Big,
+        "little" => EndianMode::Little,
+        _ => EndianMode::native(),
+    };
+
+    match take_state(&mut cx)?.assemble(&code, endian) {
         Ok(_) => Ok(cx.null().upcast()),
         Err(e) => Ok(cx.string(e).upcast()),
     }
@@ -91,6 +100,15 @@ fn stop(mut cx: FunctionContext) -> JsResult<JsUndefined> {
     Ok(cx.undefined())
 }
 
+fn get_native_endian(mut cx: FunctionContext) -> JsResult<JsString> {
+    let endian = match EndianMode::native() {
+        EndianMode::Little => "little",
+        EndianMode::Big => "big",
+    };
+
+    Ok(cx.string(endian))
+}
+
 pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("init", init)?;
     cx.export_function("finalize", finalize)?;
@@ -101,5 +119,6 @@ pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("step", step)?;
     cx.export_function("run", run)?;
     cx.export_function("stop", stop)?;
+    cx.export_function("getNativeEndian", get_native_endian)?;
     Ok(())
 }

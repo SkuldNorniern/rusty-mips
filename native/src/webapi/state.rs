@@ -16,12 +16,14 @@ pub struct State {
 
 #[derive(Debug)]
 struct Inner {
+    clean_after_reset: bool,
     interpreter: Interpreter,
 }
 
 impl Default for Inner {
     fn default() -> Self {
         Inner {
+            clean_after_reset: true,
             interpreter: Interpreter::new(create_empty_memory(EndianMode::native())),
         }
     }
@@ -43,15 +45,16 @@ impl State {
         self.notify_all();
     }
 
-    pub fn assemble(&mut self, code: &str) -> Result<(), String> {
-        let segs = assemble(EndianMode::native(), code).map_err(|e| e.to_string())?;
-        let mem = create_memory(EndianMode::native(), &segs);
+    pub fn assemble(&mut self, code: &str, endian: EndianMode) -> Result<(), String> {
+        let segs = assemble(endian, code).map_err(|e| e.to_string())?;
+        let mem = create_memory(endian, &segs);
         self.inner.interpreter = Interpreter::new(mem);
         self.notify_all();
         Ok(())
     }
 
     pub fn edit_register(&mut self, r: RegisterName, val: u32) -> Result<(), ()> {
+        self.inner.clean_after_reset = false;
         self.inner.interpreter.set_reg(r, val);
 
         self.notify_all();
@@ -66,12 +69,14 @@ impl State {
     }
 
     pub fn step(&mut self) -> Result<(), String> {
+        self.inner.clean_after_reset = false;
         let result = self.step_silent();
         self.notify_all();
         result
     }
 
     pub fn step_silent(&mut self) -> Result<(), String> {
+        self.inner.clean_after_reset = false;
         if self.inner.interpreter.pc() < 0x00001000 {
             Ok(())
         } else {
@@ -94,6 +99,7 @@ impl State {
     pub fn notify_all(&self) {
         let callback = self.callback.clone();
 
+        let clean_after_reset = self.inner.clean_after_reset;
         let regs = self.inner.capture_regs();
         let pc = self.inner.capture_pc();
         let disasm_mapping = self.inner.capture_disasm();
@@ -116,6 +122,7 @@ impl State {
             disasm_list.sort();
             let disasm_list = js_array_numbers(&mut cx, disasm_list.iter())?;
             let running = cx.boolean(running);
+            let clean_after_reset = cx.boolean(clean_after_reset);
 
             let obj = cx.empty_object();
             obj.set(&mut cx, "regs", regs)?;
@@ -123,6 +130,7 @@ impl State {
             obj.set(&mut cx, "disasm", disasm)?;
             obj.set(&mut cx, "disasmList", disasm_list)?;
             obj.set(&mut cx, "running", running)?;
+            obj.set(&mut cx, "cleanAfterReset", clean_after_reset)?;
 
             callback
                 .to_inner(&mut cx)

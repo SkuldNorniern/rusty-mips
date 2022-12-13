@@ -2,6 +2,7 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 import styled from '@emotion/styled';
 import { NativeLibContext } from '../context/NativeLibContext';
+import { EndianSwitch } from '../views/EndianSwitch';
 
 const Root = styled.div`
   display: flex;
@@ -18,6 +19,7 @@ const CodeArea = styled.textarea`
 const StatusArea = styled.div`
   display: flex;
   flex-direction: row;
+  align-items: center;
 `;
 
 const StatusText = styled.div`
@@ -26,7 +28,6 @@ const StatusText = styled.div`
 
 const ButtonArea = styled.div`
   flex-shrink: 0;
-  margin-left: auto;
   margin-right: 0;
 `;
 
@@ -82,32 +83,48 @@ fibonacci:
     ## End of function fibonacci
 `;
 
+interface IState {
+  lastStatus: string
+  endian: 'big' | 'little'
+  canChangeEndian: boolean
+}
+
 const AssemblyPage = (): JSX.Element => {
   const native = React.useContext(NativeLibContext);
   const codeRef = React.useRef<HTMLTextAreaElement>(null);
-  const [lastStatus, setLastStatus] = React.useState('');
+  const [state, setState] = React.useState<Readonly<IState>>(() => ({
+    lastStatus: '',
+    endian: native.lib.getNativeEndian(),
+    canChangeEndian: true
+  }));
 
   const onClickErase = (): void => {
     if (codeRef.current != null) {
       codeRef.current.value = '';
-      setLastStatus('');
+      setState(prev => ({ ...prev, lastStatus: '' }));
     }
   };
 
   const onAssemble = (): void => {
     if (codeRef.current == null || !native.initialized) { return; }
-    const answer = native.lib.assemble(codeRef.current.value);
+    const answer = native.lib.assemble(codeRef.current.value, state.endian);
     if (answer != null) {
-      setLastStatus(answer);
+      setState(prev => ({ ...prev, lastStatus: answer, canChangeEndian: true }));
     } else {
-      setLastStatus('assemble success');
+      setState(prev => ({ ...prev, lastStatus: 'assemble ok', canChangeEndian: false }));
     }
   };
 
   const onReset = (): void => {
     if (native.initialized) {
       native.lib.reset();
-      setLastStatus('');
+      setState(prev => ({ ...prev, lastStatus: '', canChangeEndian: true }));
+    }
+  };
+
+  const onSetEndian = (endian: 'big' | 'little'): void => {
+    if (native.state.cleanAfterReset && state.canChangeEndian) {
+      setState(prev => ({ ...prev, endian }));
     }
   };
 
@@ -116,8 +133,9 @@ const AssemblyPage = (): JSX.Element => {
       <CodeArea ref={codeRef} className="code" defaultValue={defaultValue.trim()} />
       <StatusArea>
         <StatusText>
-          {lastStatus}
+          {state.lastStatus}
         </StatusText>
+        <EndianSwitch endian={state.endian} canChange={state.canChangeEndian} onSetEndian={onSetEndian} />
         <ButtonArea>
           <Button variant="primary" onClick={onAssemble}>어셈블!</Button>{' '}
           <Button variant="secondary" onClick={onClickErase}>지우기</Button>{' '}
