@@ -16,7 +16,7 @@ pub fn hazard_ctrl(
         fwd_unit.hazard = true;
         fwd_unit.pc_write = false;
         fwd_unit.if_id_write = false;
-    } else if _id_ex.ctr_unit.branch ==1  || _ex_mem.ctr_unit.branch == 1 {
+    } else if _id_ex.ctr_unit.branch == 1 || _ex_mem.ctr_unit.branch == 1 {
         fwd_unit.if_id_write = false;
         fwd_unit.hazard = true;
     } else {

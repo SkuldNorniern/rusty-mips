@@ -13,7 +13,7 @@ pub fn next(_ex_mem: &mut pipes::ExPipe, _lmd: u32) -> (pipes::MemPipe, (u32, u3
     }
 
     if _ex_mem.ctr_unit.mem_write == 1 {
-        mem_data = ((_ex_mem.alu_out / 4), _ex_mem.data_b, true);
+        mem_data = ((_ex_mem.alu_out), _ex_mem.data_b, true);
     }
 
     mem_wb.alu_out = _ex_mem.alu_out;

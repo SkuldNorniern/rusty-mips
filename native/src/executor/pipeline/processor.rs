@@ -61,29 +61,47 @@ impl Pipeline {
     }
 
     pub fn next(&mut self, _finalize: bool) {
+        println!("PROC: step: {}", self.arch.pc());
         self.fwd_unit = stage::forward::fwd_ctrl(
             &mut self.ex_mem,
             &mut self.mem_wb,
             &mut self.id_ex,
             self.fwd_unit,
         );
+        println!(
+            "WB  : memtoreg: {}, regwrite: {}",
+            self.mem_wb.ctr_unit.mem_to_reg, self.mem_wb.ctr_unit.reg_write
+        );
         let wb_tup = stage::wb_stage::next(&mut self.mem_wb);
         self.wb = wb_tup.0;
+        println!("WB  : addr: {}, data: {}", wb_tup.1 .0, wb_tup.1 .1);
         self.set_reg(wb_tup.1 .0, wb_tup.1 .1);
-        let lmd_addr = self.ex_mem.alu_out / 4;
-        let mem_tup = stage::mem_stage::next(&mut self.ex_mem, self.arch.mem.read_u32(lmd_addr));
+        println!("REG : addr 18 data {}", self.reg(18));
+        let lmd_addr = self.ex_mem.alu_out;
+
+        let lmd = self.arch.mem.read_u32(lmd_addr);
+        println!("MEM : lmd_addr: {}", lmd_addr);
+        println!("MEM : lmd: {}", lmd);
+        println!("MEM : ex_rd: {}", self.ex_mem.rd);
+        let mem_tup = stage::mem_stage::next(&mut self.ex_mem, lmd);
         self.mem_wb = mem_tup.0;
+        println!("MEM : addr : {}, data: {}", mem_tup.1 .0, mem_tup.1 .1);
         if mem_tup.1 .2 {
             self.arch.mem.write_u32(mem_tup.1 .0, mem_tup.1 .1);
         }
+
         self.ex_mem = stage::ex_stage::next(&mut self.id_ex, self.fwd_unit);
-        
+
         let data_a_addr = (self.if_id.inst & 0x03E00000) >> 21;
         let data_a = self.reg(data_a_addr);
         let data_b_addr = (self.if_id.inst & 0x001F0000) >> 16;
         let data_b = self.reg(data_b_addr);
+        println!("ID  : data_a: {}, data_b: {}", data_a, data_b);
+        println!("ID  : id_rd: {}", self.id_ex.rd);
+        println!("ID  : id_rs: {}", self.id_ex.rs);
+        println!("ID  : id_rt: {}", self.id_ex.rt);
         self.id_ex =
-            stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard,data_a,data_b);
+            stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, data_a, data_b);
         let mut cur_inst = self.arch.mem.read_u32(self.arch.pc());
         if _finalize {
             cur_inst = 0x00000000;
@@ -96,9 +114,16 @@ impl Pipeline {
             self.arch.pc(),
             _finalize,
         );
+        println!("IF  : inst: {}", self.if_id.inst);
         self.if_id = if_tup.0;
         self.arch.set_pc(if_tup.1);
-        self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id, &mut self.id_ex,&mut self.ex_mem, self.fwd_unit);
+
+        self.fwd_unit = stage::hazard::hazard_ctrl(
+            &mut self.if_id,
+            &mut self.id_ex,
+            &mut self.ex_mem,
+            self.fwd_unit,
+        );
     }
 
     pub fn step(&mut self) {
@@ -431,61 +456,6 @@ mod tests {
         proc.step();
         assert_eq!(proc.if_id.inst, 0x02001022);
         proc.step();
-        
-    }
-
-    #[test]
-    fn processor_cycle_4_inst() {
-        //TODO Finish this test
-        let mut proc = make(".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5");
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x02119020);
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x02001022);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x00858820);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        assert_eq!(proc.ex_mem.alu_out, 0x9020);
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x0);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        //assert_eq!(proc.ex_mem.alu_out, );
-        //assert_eq!(proc.mem_wb.alu_out, );
-    }
-
-    #[test]
-    fn processor_cycle_5_inst() {
-        //TODO Finish this test
-        let mut proc =
-            make(".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5\nadd $6, $7, $8");
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x02119020);
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x02001022);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x00858820);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        assert_eq!(proc.ex_mem.alu_out, 0x9020);
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x00E83020);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        //assert_eq!(proc.ex_mem.alu_out, );
-        //assert_eq!(proc.mem_wb.alu_out, );
-        proc.step();
-        assert_eq!(proc.if_id.inst, 0x0);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        //assert_eq!(proc.ex_mem.alu_out, );
-        //assert_eq!(proc.mem_wb.alu_out, );
-        assert_eq!(proc.reg(18), 0x0);
     }
 
     //TODO Add more tests
@@ -524,12 +494,17 @@ mod tests {
         proc.step();
         proc.step();
         assert_eq!(proc.reg(18), 0x1);
-    }    
+    }
     #[test]
-    fn inst_lw(){
-        let mut proc = make(".data 0x10008000\n.word 1\n.text\nlw $18, 0x0($gp)\nnop\nnop\nnop\nnop\nnop\nnop");
+    fn inst_lw() {
+        let mut proc = make(
+            ".data 0x10008000\n.word 1\n.text\nlw $18, 0x0($gp)\nnop\nnop\nnop\nnop\nnop\nnop",
+        );
         proc.step();
-        assert_eq!(proc.if_id.inst, 0x8C990000);
+        proc.step();
+        println!("MEM::::{:?}", proc.arch.mem.read_u32(0x10008000));
+        proc.step();
+        proc.step();
         proc.step();
         proc.step();
         proc.step();
@@ -538,28 +513,22 @@ mod tests {
         assert_eq!(proc.reg(18), 0x1);
     }
     #[test]
-    fn inst_sw_lw(){
-        let mut proc = make(".text\naddi $18, $0, 0x1\nsw $18, 0($0)\nlw $19, 8($0)\nnop\nnop\nnop\nnop\nnop\nnop");
-        proc.arch.mem.write_u32(8, 0x1); 
-        proc.step();
-        println!("{:?}", proc.ex_mem.alu_out); 
-        proc.step();
-        println!("{:?}", proc.ex_mem.alu_out); 
-        proc.step();
-        println!("{:?}", proc.ex_mem.alu_out);
+    fn inst_sw_lw() {
+        let mut proc = make(".text\naddi $18, $0, 0x1\nsw $18, 0($gp)\nlw $19, 0($gp)\nnop\nnop\nnop\nnop\nnop\nnop");
         proc.step();
         proc.step();
         proc.step();
         proc.step();
-        println!("{:?}", proc.ex_mem.alu_out);
-        
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
         assert_eq!(proc.reg(19), 0x1);
-        assert_eq!(proc.reg(19), 0x1);
-        panic!()
+        //panic!()
     }
     #[test]
-    fn inst_add(){
-        let mut proc = make(".text\naddi $t0, $0, 1\naddi $t1, $0, 2\nnop\nadd $t2, $t1, $t0");
+    fn inst_add() {
+        let mut proc = make(".text\naddi $t0, $0, 1\naddi $t1, $0, 2\nadd $t2, $t1, $t0");
         proc.step();
         proc.step();
         proc.step();
@@ -569,11 +538,6 @@ mod tests {
         proc.step();
         assert_eq!(proc.reg(9), 0x2);
         proc.step();
-        proc.step();
-        proc.step();
-
-        assert_eq!(proc.reg(8), 0x1);
-        assert_eq!(proc.reg(9), 0x2);
         assert_eq!(proc.reg(10), 0x3);
     }
     #[test]
@@ -588,5 +552,47 @@ mod tests {
         assert_eq!(proc.arch.pc(), 0x00400030);
         proc.step();
         assert_eq!(proc.arch.pc(), 0x00400034);
+    }
+
+    #[test]
+    fn inst_sw() {
+        let mut proc = make(".text\naddi $t0, $0, 1\nnop\nnop\nnop\nnop\nsw $t0, 0($gp)\nnop\nnop\nnop\nnop\nnop\nnop");
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        assert_eq!(proc.reg(8), 0x1);
+        assert_eq!(proc.arch.mem.read_u32(0x10008000), 0x1);
+    }
+    #[test]
+    fn inst_beq() {
+        let mut proc = make(".text\na:\naddi $s0, $0, 1\nbeq $0, $0, b\naddi $s1, $0, 1\naddi $s2, $0, 1\nb:\naddi $s3, $0, 1");
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        assert_eq!(proc.reg(16), 0x1);
+        assert_eq!(proc.reg(17), 0x1);
+        assert_eq!(proc.reg(18), 0x0);
+        assert_eq!(proc.reg(19), 0x1);
+
+        assert_eq!(proc.arch.mem.read_u32(0x10008000), 0x1);
     }
 }
