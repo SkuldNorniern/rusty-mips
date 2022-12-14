@@ -10,6 +10,7 @@ fn branch_offset(x: TypeI) -> u32 {
 #[derive(Debug)]
 pub struct Interpreter {
     arch: Arch,
+    branch_target: Option<u32>,
 }
 
 impl Interpreter {
@@ -28,17 +29,17 @@ impl Interpreter {
     pub fn new(mem: Box<dyn Memory>) -> Self {
         Interpreter {
             arch: Arch::new(mem),
+            branch_target: None,
         }
     }
 
     pub fn step(&mut self) -> Result<(), ExecuteError> {
         let ins = Instruction::decode(self.arch.mem.read_u32(self.arch.pc()));
-
-        if let Some(x) = ins.as_invalid() {
-            return InvalidInstructionSnafu { ins: x }.fail();
-        }
-
         self.execute(ins)
+    }
+
+    pub(super) fn is_branch_delay(&self) -> bool {
+        self.branch_target.is_some()
     }
 
     fn reg(&self, reg: RegisterName) -> u32 {
@@ -56,12 +57,16 @@ impl Interpreter {
     fn execute(&mut self, ins: Instruction) -> Result<(), ExecuteError> {
         use Instruction::*;
 
-        let mut pc = self.arch.pc() + 4;
+        // set the next pc
+        let mut pc = match self.branch_target.take() {
+            Some(x) => x,
+            None => self.arch.pc() + 4,
+        };
 
         match ins {
             add(x) => match i32::checked_add(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
                 Some(val) => self.set_reg(x.rd, val as u32),
-                None => ArithmeticOverflowSnafu {}.fail()?,
+                None => return ArithmeticOverflowSnafu {}.fail(),
             },
             addu(x) => {
                 let val = u32::wrapping_add(self.reg(x.rs), self.reg(x.rt));
@@ -89,7 +94,7 @@ impl Interpreter {
             }
             sub(x) => match i32::checked_sub(self.reg(x.rs) as i32, self.reg(x.rt) as i32) {
                 Some(val) => self.set_reg(x.rd, val as u32),
-                None => ArithmeticOverflowSnafu {}.fail()?,
+                None => return ArithmeticOverflowSnafu {}.fail(),
             },
             subu(x) => {
                 let val = u32::wrapping_sub(self.reg(x.rs), self.reg(x.rt));
@@ -125,7 +130,7 @@ impl Interpreter {
             }
             addi(x) => match i32::checked_add(self.reg(x.rs) as i32, x.imm as i16 as i32) {
                 Some(val) => self.set_reg(x.rt, val as u32),
-                None => ArithmeticOverflowSnafu {}.fail()?,
+                None => return ArithmeticOverflowSnafu {}.fail(),
             },
             addiu(x) => {
                 let val = self.reg(x.rs).wrapping_add(x.imm as i16 as i32 as u32);
@@ -156,44 +161,44 @@ impl Interpreter {
             }
             beq(x) => {
                 if self.reg(x.rs) == self.reg(x.rt) {
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             bgez(x) => {
                 if (self.reg(x.rs) as i32) >= 0 {
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             bgezal(x) => {
                 if (self.reg(x.rs) as i32) >= 0 {
                     self.set_reg(RegisterName::new(31), pc);
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             bgtz(x) => {
                 if (self.reg(x.rs) as i32) > 0 {
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             blez(x) => {
                 if (self.reg(x.rs) as i32) < 0 {
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             bltz(x) => {
                 if (self.reg(x.rs) as i32) < 0 {
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             bltzal(x) => {
                 if (self.reg(x.rs) as i32) < 0 {
                     self.set_reg(RegisterName::new(31), pc);
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             bne(x) => {
                 if self.reg(x.rs) != self.reg(x.rt) {
-                    pc = pc.wrapping_add(branch_offset(x));
+                    self.branch_target = Some(pc.wrapping_add(branch_offset(x)));
                 }
             }
             lb(x) => {
@@ -230,20 +235,20 @@ impl Interpreter {
             }
             j(x) => {
                 let addr = (pc & 0xf000_0000) | ((x.target & 0x3ff_ffff) << 2);
-                pc = addr;
+                self.branch_target = Some(addr);
             }
             jal(x) => {
                 let addr = (pc & 0xf000_0000) | ((x.target & 0x3ff_ffff) << 2);
                 self.set_reg(RegisterName::new(31), pc);
-                pc = addr;
+                self.branch_target = Some(addr);
             }
             jalr(x) => {
                 let addr = self.reg(x.rs);
                 self.set_reg(x.rd, pc);
-                pc = addr;
+                self.branch_target = Some(addr);
             }
             jr(x) => {
-                pc = self.reg(x.rs);
+                self.branch_target = Some(self.reg(x.rs));
             }
             syscall(_) => {
                 self.handle_syscall();
@@ -371,20 +376,33 @@ mod test {
 
     #[test]
     fn jump() {
-        let mut state = init_state(".text\nj 0x00001234");
+        let mut state = init_state(".text\nj 0x00001234\nslt $0, $0, $0");
+        state.step().unwrap();
+        assert_eq!(state.arch.pc(), 0x00400028);
+        assert!(state.is_branch_delay());
         state.step().unwrap();
         assert_eq!(state.arch.pc(), 0x1234);
+        assert!(!state.is_branch_delay());
     }
 
     #[test]
     fn beq() {
         let mut state = init_state(
-            ".text\nstart:\nadd $16, $16, $17\nbeq $16, $0, fin\nj start\nfin:\nj 0x00001234",
+            r".text
+        start:
+            add $16, $16, $17
+            beq $16, $0, fin
+            slt $0, $0, $0
+            j start
+            slt $0, $0, $0
+        fin:
+            j 0x00001234
+            slt $0, $0, $0",
         );
         state.arch.reg[16] = 3;
         state.arch.reg[17] = -1_i32 as u32;
 
-        let expected_pc = [0, 4, 8, 0, 4, 8, 0, 4, 12];
+        let expected_pc = [0, 4, 8, 12, 16, 0, 4, 8, 12, 16, 0, 4, 8, 20, 24];
 
         for pc in expected_pc {
             assert_eq!(pc + TEXT_ADDR, state.arch.pc());
@@ -456,14 +474,16 @@ mod test {
         // See https://gist.github.com/libertylocked/068b118354539a8be992
         let mut state = init_state(
             r"
-        .text
+		.text
         .globl main
         main:
             ori $a0, $0, 10
             or $s0, $ra, $zero
             jal fibonacci
+            nop
             or $ra, $s0, $zero
             jr $ra  # Terminate the program
+            nop
         fibonacci:
             # Prologue
             addi $sp, $sp, -12
@@ -474,19 +494,20 @@ mod test {
             ori $v0, $zero, 1 # return value for terminal condition
             slti $t0, $16, 3
             bne $t0, $0, fibonacciExit # check terminal condition
-            addi $a0, $s0, -1 # set args for recursive call to f(n-1)
+            nop
             jal fibonacci
+            addi $a0, $s0, -1 # delay slot; set args for recursive call to f(n-1)
             or $s1, $v0, $zero # store result of f(n-1) to s1
-            addi $a0, $s0, -2 # set args for recursive call to f(n-2)
             jal fibonacci
+            addi $a0, $s0, -2 # delay slot; set args for recursive call to f(n-2)
             add $v0, $s1, $v0 # add result of f(n-1) to it
         fibonacciExit:
             # Epilogue
             lw $ra, 8($sp)
             lw $s0, 4($sp)
             lw $s1, 0($sp)
-            addi $sp, $sp, 12
             jr $ra
+            addi $sp, $sp, 12 # delay slot
             ## End of function fibonacci",
         );
 
