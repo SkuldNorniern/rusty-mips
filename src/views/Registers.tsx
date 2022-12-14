@@ -49,6 +49,10 @@ const generateRegisterNames = (): { [k: number]: string } => {
   return ret;
 };
 
+interface IProps {
+  editable?: boolean
+}
+
 interface InnerProps {
   children: JSX.Element
   onClick: React.MouseEventHandler<HTMLSpanElement>
@@ -69,7 +73,7 @@ MenuToggle.displayName = 'MenuToggle';
 
 export const registerNames: { [k: number]: string | undefined } = generateRegisterNames();
 
-const Registers = (): JSX.Element | null => {
+const Registers = ({ editable = true }: IProps): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
   const [format, setFormat] = React.useState('hex');
   const [editRegisterDialogIndex, setEditRegisterDialogIndex] = React.useState(-1);
@@ -107,25 +111,29 @@ const Registers = (): JSX.Element | null => {
         onSet={(idx, value) => native.lib.editRegister(idx, value)} />
       <Card style={{ display: 'inline-block', overflowY: 'auto' }}>
         <RootTable>
-            {native.state.regs.map((val, idx) => (
-              <Dropdown key={idx} onSelect={onSelect.bind(null, idx)}>
-                <Dropdown.Toggle as={MenuToggle}>
-                  <div key={idx}>
-                    <span>
-                      R{idx.toString().padEnd(2)}&nbsp;[{registerNames[idx]}] =&nbsp;
-                    </span>
-                    <RadixValue value={val} format={format}/>
-                  </div>
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item eventKey="edit" disabled={idx === 0}>수정</Dropdown.Item>
-                  <Dropdown.Divider/>
-                  <Dropdown.Item eventKey="viewBin">2진수로 표시</Dropdown.Item>
-                  <Dropdown.Item eventKey="viewDec">10진수로 표시</Dropdown.Item>
-                  <Dropdown.Item eventKey="viewHex">16진수로 표시</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            ))}
+          <div>
+            <span>PC &nbsp; &nbsp; &nbsp; =&nbsp;</span>
+            <RadixValue value={native.state.pc} format={format} />
+          </div>
+          {native.state.regs.map((val, idx) => (
+            <Dropdown key={idx} onSelect={onSelect.bind(null, idx)}>
+              <Dropdown.Toggle as={MenuToggle}>
+                <div key={idx}>
+                  <span>
+                    R{idx.toString().padEnd(2)}&nbsp;[{registerNames[idx]}] =&nbsp;
+                  </span>
+                  <RadixValue value={val} format={format}/>
+                </div>
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item eventKey="edit" disabled={idx === 0 || !editable}>수정</Dropdown.Item>
+                <Dropdown.Divider/>
+                <Dropdown.Item eventKey="viewBin">2진수로 표시</Dropdown.Item>
+                <Dropdown.Item eventKey="viewDec">10진수로 표시</Dropdown.Item>
+                <Dropdown.Item eventKey="viewHex">16진수로 표시</Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          ))}
         </RootTable>
       </Card>
     </>

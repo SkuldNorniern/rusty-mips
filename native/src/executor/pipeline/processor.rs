@@ -414,4 +414,18 @@ mod tests {
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
     }
+
+    #[test]
+    fn many_nop() {
+        let mut proc = make(".text\nnop\nnop\nnop\nnop");
+        assert_eq!(proc.arch.pc(), 0x00400024);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x00400028);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x0040002c);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x00400030);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x00400034);
+    }
 }

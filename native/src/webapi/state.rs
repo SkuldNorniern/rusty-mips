@@ -1,12 +1,13 @@
 use crate::assembler::assemble;
 use crate::component::RegisterName;
 use crate::disassembler::disassemble;
-use crate::executor::{Executor, Interpreter, Jit, HAS_JIT};
+use crate::executor::{Executor, Interpreter, Jit, Pipeline, HAS_JIT};
 use crate::memory::{create_empty_memory, create_memory, EndianMode};
 use crate::webapi::updates::Updates;
 use neon::prelude::*;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
+use std::mem::swap;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
 
@@ -110,6 +111,20 @@ impl State {
         }
     }
 
+    pub fn convert_to_pipeline(&mut self) -> Updates {
+        if self.inner.capture_can_use_pipeline() {
+            return Updates::empty();
+        }
+
+        let endian = self.inner.exec.as_arch().mem().endian();
+        let mut pipeline = Executor::ExPipeline(Pipeline::new(create_empty_memory(endian)));
+        swap(&mut pipeline, &mut self.inner.exec);
+
+        *self.inner.exec.as_arch_mut() = pipeline.into_arch();
+
+        Updates::all()
+    }
+
     pub fn notify(&self, mut updates: Updates) {
         let callback = self.callback.clone();
 
@@ -121,6 +136,7 @@ impl State {
         let clean_after_reset = self.inner.clean_after_reset;
         let running = self.inner.capture_running();
         let can_use_jit = self.inner.capture_can_use_jit();
+        let can_use_pipeline = self.inner.capture_can_use_pipeline();
         let pc = self.inner.capture_pc();
 
         // expensive-to-collect ones
@@ -179,7 +195,9 @@ impl State {
             /* unconditional updates */
             {
                 let clean_after_reset = cx.boolean(clean_after_reset);
+                let can_use_pipeline = cx.boolean(can_use_pipeline);
                 obj.set(&mut cx, "cleanAfterReset", clean_after_reset)?;
+                obj.set(&mut cx, "canUsePipeline", can_use_pipeline)?;
             }
 
             callback
@@ -271,6 +289,14 @@ impl Inner {
             Executor::ExInterpreter(_) => false,
             Executor::ExJit(_) => true,
             Executor::ExPipeline(_) => false,
+        }
+    }
+
+    fn capture_can_use_pipeline(&self) -> bool {
+        match self.exec {
+            Executor::ExInterpreter(_) => false,
+            Executor::ExJit(_) => false,
+            Executor::ExPipeline(_) => true,
         }
     }
 }

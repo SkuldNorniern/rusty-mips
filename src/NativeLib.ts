@@ -12,6 +12,7 @@ export interface NativeLib {
   run: (useJit: boolean) => void
   stop: () => void
   getNativeEndian: () => 'big' | 'little'
+  convertToPipeline: () => void
 }
 
 interface IDisassembly {
@@ -26,5 +27,6 @@ interface IModuleStateRaw {
   disasmList: number[]
   cleanAfterReset: boolean
   canUseJit: boolean
+  canUsePipeline: boolean
 }
 export type IModuleState = Readonly<IModuleStateRaw>;
