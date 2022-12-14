@@ -33,27 +33,27 @@ pub fn fwd_ctrl(
         fwd_unit.fwd_b = 0;
     }
 
-    if _fwd_unit.fwd_a == 0 {
+    if fwd_unit.fwd_a == 0 {
         fwd_unit.fwd_a = _id_ex.data_a;
-    } else if _fwd_unit.fwd_a == 1 {
+    } else if fwd_unit.fwd_a == 1 {
         if _mem_wb.ctr_unit.mem_to_reg == 1 {
             fwd_unit.fwd_a = _mem_wb.lmd;
         } else {
             fwd_unit.fwd_a = _mem_wb.alu_out;
         }
-    } else if _fwd_unit.fwd_a == 2 {
+    } else if fwd_unit.fwd_a == 2 {
         fwd_unit.fwd_a = _ex_mem.alu_out;
     }
 
-    if _fwd_unit.fwd_b == 0 {
+    if fwd_unit.fwd_b == 0 {
         fwd_unit.fwd_b = _id_ex.data_b;
-    } else if _fwd_unit.fwd_b == 1 {
+    } else if fwd_unit.fwd_b == 1 {
         if _mem_wb.ctr_unit.mem_to_reg == 1 {
             fwd_unit.fwd_b = _mem_wb.lmd;
         } else {
             fwd_unit.fwd_b = _mem_wb.alu_out;
         }
-    } else if _fwd_unit.fwd_b == 2 {
+    } else if fwd_unit.fwd_b == 2 {
         fwd_unit.fwd_b = _ex_mem.alu_out;
     }
 

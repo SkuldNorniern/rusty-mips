@@ -526,6 +526,57 @@ mod tests {
         assert_eq!(proc.reg(18), 0x1);
     }    
     #[test]
+    fn inst_lw(){
+        let mut proc = make(".data 0x10008000\n.word 1\n.text\nlw $18, 0x0($gp)\nnop\nnop\nnop\nnop\nnop\nnop");
+        proc.step();
+        assert_eq!(proc.if_id.inst, 0x8C990000);
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        assert_eq!(proc.reg(18), 0x1);
+    }
+    #[test]
+    fn inst_sw_lw(){
+        let mut proc = make(".text\naddi $18, $0, 0x1\nsw $18, 0($0)\nlw $19, 8($0)\nnop\nnop\nnop\nnop\nnop\nnop");
+        proc.arch.mem.write_u32(8, 0x1); 
+        proc.step();
+        println!("{:?}", proc.ex_mem.alu_out); 
+        proc.step();
+        println!("{:?}", proc.ex_mem.alu_out); 
+        proc.step();
+        println!("{:?}", proc.ex_mem.alu_out);
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        println!("{:?}", proc.ex_mem.alu_out);
+        
+        assert_eq!(proc.reg(19), 0x1);
+        assert_eq!(proc.reg(19), 0x1);
+        panic!()
+    }
+    #[test]
+    fn inst_add(){
+        let mut proc = make(".text\naddi $t0, $0, 1\naddi $t1, $0, 2\nnop\nadd $t2, $t1, $t0");
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        assert_eq!(proc.reg(8), 0x1);
+        proc.step();
+        assert_eq!(proc.reg(9), 0x2);
+        proc.step();
+        proc.step();
+        proc.step();
+
+        assert_eq!(proc.reg(8), 0x1);
+        assert_eq!(proc.reg(9), 0x2);
+        assert_eq!(proc.reg(10), 0x3);
+    }
+    #[test]
     fn many_nop() {
         let mut proc = make(".text\nnop\nnop\nnop\nnop");
         assert_eq!(proc.arch.pc(), 0x00400024);
