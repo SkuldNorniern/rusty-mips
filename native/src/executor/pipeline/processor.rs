@@ -2,9 +2,16 @@ use super::pipes;
 use super::stage;
 use super::units;
 use crate::component::RegisterName;
-
 use crate::executor::Arch;
 use crate::memory::Memory;
+
+use std::collections::HashMap;
+
+struct Description {
+    id: String,  // id
+    name: String, // full name
+    value: u32, // value in appropriate format
+}
 
 #[derive(Debug)]
 pub struct Pipeline {
@@ -95,6 +102,183 @@ impl Pipeline {
 
     pub fn finalize(&mut self) {
         self.next(true);
+    }
+
+    fn get_block_info(&self) -> HashMap<String, Description>{
+        let mut map = HashMap::new();
+        
+        // IF/ID
+        map.insert("svg_item_if_id_npc".to_string(), Description{
+            id: "svg_item_if_id_npc".to_string(),
+            name: "Next PC".to_string(),
+            value: self.if_id.npc,
+        });
+        map.insert("svg_item_if_id_inst".to_string(), Description{
+            id: "svg_item_if_id_inst".to_string(),
+            name: "Instruction".to_string(),
+            value: self.if_id.inst,
+        });
+
+        // ID/EX
+        map.insert("svg_item_id_ex_npc".to_string(), Description{
+            id: "svg_item_id_ex_npc".to_string(),
+            name: "Next PC".to_string(),
+            value: self.id_ex.npc,
+        });
+        map.insert("svg_item_id_ex_data_a".to_string(), Description{
+            id: "svg_item_id_ex_data_a".to_string(),
+            name: "Data A".to_string(),
+            value: self.id_ex.data_a,
+        });
+        map.insert("svg_item_id_ex_data_b".to_string(), Description{
+            id: "svg_item_id_ex_data_b".to_string(),
+            name: "Data B".to_string(),
+            value: self.id_ex.data_b,
+        });
+        map.insert("svg_item_id_ex_imm".to_string(), Description{
+            id: "svg_item_id_ex_imm".to_string(),
+            name: "Immediate".to_string(),
+            value: self.id_ex.imm,
+        });
+        map.insert("svg_item_id_ex_rs".to_string(), Description{
+            id: "svg_item_id_ex_rs".to_string(),
+            name: "RS".to_string(),
+            value: self.id_ex.rs,
+        });
+        map.insert("svg_item_id_ex_rt".to_string(), Description{
+            id: "svg_item_id_ex_rt".to_string(),
+            name: "RT".to_string(),
+            value: self.id_ex.rt,
+        });
+        map.insert("svg_item_id_ex_rd".to_string(), Description{
+            id: "svg_item_id_ex_rd".to_string(),
+            name: "RD".to_string(),
+            value: self.id_ex.rd,
+        });
+        // ID/EX Control
+        map.insert("svg_item_id_ex_ctrl_reg_dst".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_reg_dst".to_string(),
+            name: "RegDst".to_string(),
+            value: self.id_ex.ctr_unit.reg_dst,
+        });
+        map.insert("svg_item_id_ex_ctrl_reg_write".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_reg_write".to_string(),
+            name: "RegWrite".to_string(),
+            value: self.id_ex.ctr_unit.reg_write,
+        });
+        map.insert("svg_item_id_ex_ctrl_mem_read".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_mem_read".to_string(),
+            name: "MemRead".to_string(),
+            value: self.id_ex.ctr_unit.mem_read,
+        });
+        map.insert("svg_item_id_ex_ctrl_mem_write".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_mem_write".to_string(),
+            name: "MemWrite".to_string(),
+            value: self.id_ex.ctr_unit.mem_write,
+        });
+        map.insert("svg_item_id_ex_ctrl_mem_to_reg".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_mem_to_reg".to_string(),
+            name: "MemToReg".to_string(),
+            value: self.id_ex.ctr_unit.mem_to_reg,
+        });
+        map.insert("svg_item_id_ex_ctrl_alu_op".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_alu_op".to_string(),
+            name: "ALUOp".to_string(),
+            value: self.id_ex.ctr_unit.alu_op,
+        });
+        map.insert("svg_item_id_ex_ctrl_alu_src".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_alu_src".to_string(),
+            name: "ALUSrc".to_string(),
+            value: self.id_ex.ctr_unit.alu_src,
+        });
+        map.insert("svg_item_id_ex_ctrl_branch".to_string(), Description{
+            id: "svg_item_id_ex_ctrl_branch".to_string(),
+            name: "Branch".to_string(),
+            value: self.id_ex.ctr_unit.branch,
+        });
+        
+        // EX/MEM
+        map.insert("svg_item_ex_mem_br_tgt".to_string(), Description{
+            id: "svg_item_ex_mem_br_tgt".to_string(),
+            name: "Branch Target".to_string(),
+            value: self.ex_mem.branch_tgt,
+        });
+        map.insert("svg_item_ex_mem_zero".to_string(), Description{
+            id: "svg_item_ex_mem_zero".to_string(),
+            name: "Zero".to_string(),
+            value: self.ex_mem.zero,
+        });
+        map.insert("svg_item_ex_mem_alu_out".to_string(), Description{
+            id: "svg_item_ex_mem_alu_out".to_string(),
+            name: "ALU Out".to_string(),
+            value: self.ex_mem.alu_out,
+        });
+        map.insert("svg_item_ex_mem_data_b".to_string(), Description{
+            id: "svg_item_ex_mem_data_b".to_string(),
+            name: "Data B".to_string(),
+            value: self.ex_mem.data_b,
+        });
+        map.insert("svg_item_ex_mem_rd".to_string(), Description{
+            id: "svg_item_ex_mem_rd".to_string(),
+            name: "RD".to_string(),
+            value: self.ex_mem.rd,
+        });
+        // EX/MEM Control
+        map.insert("svg_item_ex_mem_ctrl_reg_write".to_string(), Description{
+            id: "svg_item_ex_mem_ctrl_reg_write".to_string(),
+            name: "RegWrite".to_string(),
+            value: self.ex_mem.ctr_unit.reg_write,
+        });
+        map.insert("svg_item_ex_mem_ctrl_mem_read".to_string(), Description{
+            id: "svg_item_ex_mem_ctrl_mem_read".to_string(),
+            name: "MemRead".to_string(),
+            value: self.ex_mem.ctr_unit.mem_read,
+        });
+        map.insert("svg_item_ex_mem_ctrl_mem_write".to_string(), Description{
+            id: "svg_item_ex_mem_ctrl_mem_write".to_string(),
+            name: "MemWrite".to_string(),
+            value: self.ex_mem.ctr_unit.mem_write,
+        });
+        map.insert("svg_item_ex_mem_ctrl_mem_to_reg".to_string(), Description{
+            id: "svg_item_ex_mem_ctrl_mem_to_reg".to_string(),
+            name: "MemToReg".to_string(),
+            value: self.ex_mem.ctr_unit.mem_to_reg,
+        });
+        map.insert("svg_item_ex_mem_ctrl_branch".to_string(), Description{
+            id: "svg_item_ex_mem_ctrl_branch".to_string(),
+            name: "Branch".to_string(),
+            value: self.ex_mem.ctr_unit.branch,
+        });
+        
+        // MEM/WB
+        map.insert("svg_item_mem_wb_lmd".to_string(), Description{
+            id: "svg_item_mem_wb_lmd".to_string(),
+            name: "LMD".to_string(),
+            value: self.mem_wb.alu_out,
+        });
+        map.insert("svg_item_mem_wb_alu_out".to_string(), Description{
+            id: "svg_item_mem_wb_alu_out".to_string(),
+            name: "ALU Out".to_string(),
+            value: self.mem_wb.rd,
+        });
+        map.insert("svg_item_mem_wb_rd".to_string(), Description{
+            id: "svg_item_mem_wb_rd".to_string(),
+            name: "RD".to_string(),
+            value: self.mem_wb.rd,
+        });
+        // MEM/WB Control
+        map.insert("svg_item_mem_wb_ctrl_reg_write".to_string(), Description{
+            id: "svg_item_mem_wb_ctrl_reg_write".to_string(),
+            name: "RegWrite".to_string(),
+            value: self.mem_wb.ctr_unit.reg_write,
+        });
+        map.insert("svg_item_mem_wb_ctrl_mem_to_reg".to_string(), Description{
+            id: "svg_item_mem_wb_ctrl_mem_to_reg".to_string(),
+            name: "MemToReg".to_string(),
+            value: self.mem_wb.ctr_unit.mem_to_reg,
+        });
+
+        map
     }
 }
 
