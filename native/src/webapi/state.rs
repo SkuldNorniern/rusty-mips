@@ -1,7 +1,7 @@
 use crate::assembler::assemble;
 use crate::component::RegisterName;
 use crate::disassembler::disassemble;
-use crate::executor::{Executor, Interpreter, Jit};
+use crate::executor::{Executor, Interpreter, Jit, HAS_JIT};
 use crate::memory::{create_empty_memory, create_memory, EndianMode};
 use crate::webapi::updates::Updates;
 use neon::prelude::*;
@@ -56,7 +56,7 @@ impl State {
         let segs = assemble(endian, code).map_err(|e| e.to_string())?;
         let mem = create_memory(endian, &segs);
 
-        if endian == EndianMode::native() {
+        if HAS_JIT && endian == EndianMode::native() {
             self.inner.exec = Executor::ExJit(Jit::new(mem));
         } else {
             self.inner.exec = Executor::ExInterpreter(Interpreter::new(mem));

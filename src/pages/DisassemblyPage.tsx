@@ -84,7 +84,11 @@ const DisassemblyPage = (): JSX.Element | null => {
           </ButtonGroup>
         </Status>
         <Status>
-          <Form.Switch label="JIT 사용" checked={state.useJit} onChange={handleChangeJit} disabled={!native.state.canUseJit} />
+          <Form.Switch
+            label="JIT 사용"
+            checked={state.useJit && native.state.canUseJit}
+            onChange={handleChangeJit}
+            disabled={!native.state.canUseJit} />
         </Status>
         <Disassembly scrollIntoView={state.scrollIntoView} />
       </VerticalAlign>

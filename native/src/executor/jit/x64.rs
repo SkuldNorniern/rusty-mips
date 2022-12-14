@@ -16,20 +16,20 @@ struct CompiledCode {
 }
 
 #[derive(Debug)]
-pub struct Jit {
+pub struct X64Jit {
     interpreter: Interpreter,
     codes: FxHashMap<u32, CompiledCode>,
     failures: FxHashSet<u32>,
 }
 
-impl Jit {
+impl X64Jit {
     pub fn new(mem: Box<dyn Memory>) -> Self {
         assert!(
             mem.fastmem_addr().is_some(),
             "JIT should be used only with fastmem"
         );
 
-        Jit {
+        X64Jit {
             interpreter: Interpreter::new(mem),
             codes: FxHashMap::default(),
             failures: FxHashSet::default(),
