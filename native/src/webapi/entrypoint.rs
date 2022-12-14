@@ -150,6 +150,13 @@ fn get_native_endian(mut cx: FunctionContext) -> JsResult<JsString> {
     Ok(cx.string(endian))
 }
 
+fn convert_to_pipeline(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let mut state = take_state(&mut cx)?;
+    let updates = state.convert_to_pipeline();
+    state.notify(updates);
+    Ok(cx.undefined())
+}
+
 pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("init", init)?;
     cx.export_function("finalize", finalize)?;
@@ -161,5 +168,6 @@ pub fn register_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("run", run)?;
     cx.export_function("stop", stop)?;
     cx.export_function("getNativeEndian", get_native_endian)?;
+    cx.export_function("convertToPipeline", convert_to_pipeline)?;
     Ok(())
 }

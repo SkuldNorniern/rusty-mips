@@ -12,10 +12,20 @@ export interface NativeLib {
   run: (useJit: boolean) => void
   stop: () => void
   getNativeEndian: () => 'big' | 'little'
+  convertToPipeline: () => void
 }
 
 interface IDisassembly {
   [k: string]: [number, string]
+}
+
+interface IPipelineDetailEntry {
+  name: string
+  value: string
+}
+
+interface IPipelineDetail {
+  [k: string]: IPipelineDetailEntry
 }
 
 interface IModuleStateRaw {
@@ -26,5 +36,8 @@ interface IModuleStateRaw {
   disasmList: number[]
   cleanAfterReset: boolean
   canUseJit: boolean
+  canUsePipeline: boolean
+  pipelineDetail: IPipelineDetail
+  pipelineDetailList: string[]
 }
 export type IModuleState = Readonly<IModuleStateRaw>;

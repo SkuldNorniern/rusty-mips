@@ -9,3 +9,4 @@ pub use arch::Arch;
 pub use executor_trait::Executor;
 pub use interpreter::Interpreter;
 pub use jit::{Jit, HAS_JIT};
+pub use pipeline::processor::{Description, Pipeline};

@@ -3,7 +3,6 @@ import Button from 'react-bootstrap/Button';
 import styled from '@emotion/styled';
 import { NativeLibContext } from '../context/NativeLibContext';
 import { EndianSwitch } from '../views/EndianSwitch';
-import Form from 'react-bootstrap/Form';
 
 const Root = styled.div`
   display: flex;
