@@ -44,3 +44,17 @@ it is only possible to build for current platform only.
 It *could* be possible to workaround above limitation by using Docker.
 
 This builds the Rust module in release mode.
+
+## License
+
+This program is licensed under "GPLv2+".
+
+```
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 2 of the License, or (at your option) any later
+version.
+```
+
+You can find the full licence text of GPLv2 in `LICENSE.md`. License text of
+later versions can be found on Free Software Foundation website.
