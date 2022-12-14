@@ -3,6 +3,9 @@ import Button from 'react-bootstrap/Button';
 import styled from '@emotion/styled';
 import { NativeLibContext } from '../context/NativeLibContext';
 import { EndianSwitch } from '../views/EndianSwitch';
+import { ToastContext } from '../context/ToastContext';
+import Dropdown from 'react-bootstrap/Dropdown';
+import { TEMPLATE_CODE } from '../components/TemplateCode';
 
 const Root = styled.div`
   display: flex;
@@ -22,8 +25,8 @@ const StatusArea = styled.div`
   align-items: center;
 `;
 
-const StatusText = styled.div`
-  word-break: break-word;
+const TemplateArea = styled.div`
+  margin-left: .2rem;
 `;
 
 const ButtonArea = styled.div`
@@ -31,72 +34,16 @@ const ButtonArea = styled.div`
   margin-right: 0;
 `;
 
-const defaultValue = `
-# Recursive fibonacci calculator
-# Function signature: int fibonacci(int)
-# Also saves the result into $gp as an int array (e.g. $gp = fibonacci(2), $gp + 4 = fibonacci(3), ...)
-# Modified from https://gist.github.com/libertylocked/068b118354539a8be992
-.text
-.globl main
-main:
-    # Calculate fibonacci upto this number (7)
-    ori $a0, $0, 7
-    or $s0, $ra, $zero
-    jal fibonacci
-
-    # Now the answer is in $v0
-    # NOP here so you can check out register pane
-    # (also serves as a branch delay slot)
-    nop
-
-    or $ra, $s0, $zero
-    # Terminate the program
-    jr $ra
-    nop
-fibonacci:
-    # Prologue
-    addi $sp, $sp, -12
-    sw $ra, 8($sp)
-    sw $s0, 4($sp)
-    sw $s1, 0($sp)
-    or $s0, $a0, $zero
-    ori $v0, $zero, 1 # return value for terminal condition
-    slti $t0, $16, 3
-    bne $t0, $0, fibonacciExit # check terminal condition
-    nop
-    jal fibonacci
-    addi $a0, $s0, -1 # delay slot; set args for recursive call to f(n-1)
-    or $s1, $v0, $zero # store result of f(n-1) to s1
-    jal fibonacci
-    addi $a0, $s0, -2 # delay slot; set args for recursive call to f(n-2)
-    add $v0, $s1, $v0 # add result of f(n-1) to it
-fibonacciExit:
-    # Save value to memory
-    add $t0, $s0, $s0
-    add $t0, $t0, $t0  # multiply by 4
-    addi $t0, $t0, -8  # align that fibonacci(2) ==> $gp
-    add $t0, $gp, $t0
-    sw $v0, 0($t0)
-    # Epilogue
-    lw $ra, 8($sp)
-    lw $s0, 4($sp)
-    lw $s1, 0($sp)
-    addi $sp, $sp, 12
-    jr $ra
-    nop
-`;
-
 interface IState {
-  lastStatus: string
   endian: 'big' | 'little'
   canChangeEndian: boolean
 }
 
 const AssemblyPage = (): JSX.Element => {
   const native = React.useContext(NativeLibContext);
+  const toast = React.useContext(ToastContext);
   const codeRef = React.useRef<HTMLTextAreaElement>(null);
   const [state, setState] = React.useState<Readonly<IState>>(() => ({
-    lastStatus: '',
     endian: native.lib.getNativeEndian(),
     canChangeEndian: true
   }));
@@ -104,7 +51,6 @@ const AssemblyPage = (): JSX.Element => {
   const onClickErase = (): void => {
     if (codeRef.current != null) {
       codeRef.current.value = '';
-      setState(prev => ({ ...prev, lastStatus: '' }));
     }
   };
 
@@ -112,9 +58,11 @@ const AssemblyPage = (): JSX.Element => {
     if (codeRef.current == null || !native.initialized) { return; }
     const answer = native.lib.assemble(codeRef.current.value, state.endian);
     if (answer != null) {
-      setState(prev => ({ ...prev, lastStatus: answer, canChangeEndian: true }));
+      setState(prev => ({ ...prev, canChangeEndian: true }));
+      toast.showToast('어셈블러', answer);
     } else {
-      setState(prev => ({ ...prev, lastStatus: 'assemble ok', canChangeEndian: false }));
+      setState(prev => ({ ...prev, canChangeEndian: false }));
+      toast.showToast('어셈블러', 'assemble successful');
     }
   };
 
@@ -131,13 +79,31 @@ const AssemblyPage = (): JSX.Element => {
     }
   };
 
+  const loadExample = (code: string): void => {
+    if (codeRef.current != null) {
+      codeRef.current.value = code.trim();
+    }
+  };
+
   return (
     <Root>
-      <CodeArea ref={codeRef} className="code" defaultValue={defaultValue.trim()} />
+      <CodeArea ref={codeRef} className="code" defaultValue={''} />
       <StatusArea>
-        <StatusText>
-          {state.lastStatus}
-        </StatusText>
+        <TemplateArea>
+          <Dropdown>
+            <Dropdown.Toggle variant="outline-secondary">
+              예제 코드 불러오기
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu>
+              {TEMPLATE_CODE.map((x, i) => (<React.Fragment key={i}>
+                <Dropdown.Item onClick={() => loadExample(x.code)}>
+                  {x.name}
+                </Dropdown.Item>
+              </React.Fragment>))}
+            </Dropdown.Menu>
+          </Dropdown>
+        </TemplateArea>
         <EndianSwitch endian={state.endian} canChange={state.canChangeEndian} onSetEndian={onSetEndian} />
         <ButtonArea>
           <Button variant="primary" onClick={onAssemble}>어셈블!</Button>{' '}

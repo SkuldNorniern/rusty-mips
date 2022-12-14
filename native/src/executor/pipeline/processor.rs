@@ -369,7 +369,7 @@ impl Pipeline {
             Description {
                 id: "svg_item_mem_wb_lmd".to_string(),
                 name: "LMD".to_string(),
-                value: format!("0x{:08x}", self.mem_wb.alu_out),
+                value: format!("0x{:08x}", self.mem_wb.lmd),
             },
         );
         map.insert(
@@ -377,7 +377,7 @@ impl Pipeline {
             Description {
                 id: "svg_item_mem_wb_alu_out".to_string(),
                 name: "ALU Out".to_string(),
-                value: format!("0x{:08x}", self.mem_wb.rd),
+                value: format!("0x{:08x}", self.mem_wb.alu_out),
             },
         );
         map.insert(
