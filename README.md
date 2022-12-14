@@ -2,6 +2,12 @@
 
 A MIPS simulator written in Rust.
 
+
+## Diagram
+
+![img](images/DataPath.png)
+
+
 ## Third-party dependency
 
 This project was bootstrapped by [create-neon](https://www.npmjs.com/package/create-neon).
@@ -38,4 +44,3 @@ it is only possible to build for current platform only.
 It *could* be possible to workaround above limitation by using Docker.
 
 This builds the Rust module in release mode.
-
