@@ -5,7 +5,7 @@ pub fn next(_ex_mem: &mut pipes::ExPipe, _lmd: u32) -> (pipes::MemPipe, (u32, u3
     let mut mem_data = (0, 0, false);
     mem_wb.ran = _ex_mem.ran;
 
-    mem_wb.ctr_unit.mem_read = _ex_mem.ctr_unit.mem_read;
+    mem_wb.ctr_unit.mem_to_reg = _ex_mem.ctr_unit.mem_to_reg;
     mem_wb.ctr_unit.reg_write = _ex_mem.ctr_unit.reg_write;
 
     if _ex_mem.ctr_unit.mem_read == 1 {

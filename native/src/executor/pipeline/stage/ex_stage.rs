@@ -16,26 +16,30 @@ pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pip
     ex_mem.branch_tgt = _id_ex.npc + (_id_ex.imm << 2);
 
     let alu_a = _fwd_unit.fwd_a;
-    let mut alu_b = _fwd_unit.fwd_b;
-    if _id_ex.ctr_unit.alu_src == 0 {
+    let mut alu_b: u32 = 0x0;
+    if _id_ex.ctr_unit.alu_src == 1 {
         alu_b = _id_ex.imm;
     }
+    else {
+        alu_b = _fwd_unit.fwd_b;
+    }
 
-    if alu_a == alu_b {
+    if alu_a - alu_b ==0 {
         ex_mem.zero = 1;
     } else {
         ex_mem.zero = 0;
     }
-
+    let mut out =0;
     if _id_ex.ctr_unit.alu_op == 0 {
-        ex_mem.alu_out = alu_a + alu_b;
+        out = alu_a + alu_b;
     } else if _id_ex.ctr_unit.alu_op == 1 {
-        ex_mem.alu_out = alu_a - alu_b;
+        out = alu_a - alu_b;
     } else if _id_ex.ctr_unit.alu_op == 2 {
         let funct = _id_ex.imm & 0x0000003F;
         let shamt = _id_ex.imm & 0x000007C0;
-        ex_mem.alu_out = function_unit::funct_unit(funct, alu_a, alu_b, shamt);
+        out = function_unit::funct_unit(funct, alu_a, alu_b, shamt);
     }
+    ex_mem.alu_out = out;
     ex_mem.data_b = _fwd_unit.fwd_b;
 
     if _id_ex.ctr_unit.reg_dst == 1 {

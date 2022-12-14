@@ -29,12 +29,12 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
         0b101011 => pipes::CtrUnitFull {
             // SW
             reg_dst: 0b0,
-            reg_write: 0b1,
+            reg_write: 0b0,
             alu_src: 0b1,
             alu_op: 0b00,
-            mem_to_reg: 0b1,
-            mem_read: 0b1,
-            mem_write: 0b0,
+            mem_to_reg: 0b0,
+            mem_read: 0b0,
+            mem_write: 0b1,
             branch: 0b0,
             if_flush: pipes::CtrUnitFull::default().if_flush,
         },
@@ -61,30 +61,6 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_write: 0b0,
             branch: 0b1,
             if_flush: pipes::CtrUnitFull::default().if_flush,
-        },
-        0b000101 => pipes::CtrUnitFull {
-            // BNE
-            reg_dst: 0b0,
-            reg_write: 0b0,
-            alu_src: 0b0,
-            alu_op: 0b01,
-            mem_to_reg: 0b0,
-            mem_read: 0b0,
-            mem_write: 0b0,
-            branch: 0b1,
-            if_flush: pipes::CtrUnitFull::default().if_flush,
-        },
-        0b000010 => pipes::CtrUnitFull {
-            // J
-            reg_dst: 0b0,
-            reg_write: 0b0,
-            alu_src: 0b0,
-            alu_op: 0b00,
-            mem_to_reg: 0b0,
-            mem_read: 0b0,
-            mem_write: 0b0,
-            branch: 0b1,
-            if_flush: 0b1,
         },
         _ => pipes::CtrUnitFull::default(),
     }

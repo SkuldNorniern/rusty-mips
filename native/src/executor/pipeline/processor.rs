@@ -77,8 +77,13 @@ impl Pipeline {
             self.arch.mem.write_u32(mem_tup.1 .0, mem_tup.1 .1);
         }
         self.ex_mem = stage::ex_stage::next(&mut self.id_ex, self.fwd_unit);
+        
+        let data_a_addr = (self.if_id.inst & 0x03E00000) >> 21;
+        let data_a = self.reg(data_a_addr);
+        let data_b_addr = (self.if_id.inst & 0x001F0000) >> 16;
+        let data_b = self.reg(data_b_addr);
         self.id_ex =
-            stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, self.arch.regs());
+            stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard,data_a,data_b);
         let mut cur_inst = self.arch.mem.read_u32(self.arch.pc());
         if _finalize {
             cur_inst = 0x00000000;
@@ -326,13 +331,8 @@ mod tests {
         assert_eq!(proc.if_id.inst, 0x02119020);
         proc.step();
         assert_eq!(proc.if_id.inst, 0x02001022);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
         proc.step();
-        assert_eq!(proc.if_id.inst, 0x0);
-        assert_eq!(proc.id_ex.data_a, 0x0);
-        assert_eq!(proc.id_ex.data_b, 0x0);
-        assert_eq!(proc.ex_mem.alu_out, 0x9020);
+        
     }
 
     #[test]
@@ -413,5 +413,29 @@ mod tests {
         proc.step();
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
+    }
+    #[test]
+    fn inst_addi() {
+        let mut proc = make(".text\naddi $18, $0, 0x1");
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        assert_eq!(proc.reg(18), 0x1);
+        
+    }
+    #[test]
+    fn many_nop() {
+        let mut proc = make(".text\nnop\nnop\nnop\nnop");
+        assert_eq!(proc.arch.pc(), 0x00400024);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x00400028);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x0040002c);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x00400030);
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x00400034);
     }
 }
