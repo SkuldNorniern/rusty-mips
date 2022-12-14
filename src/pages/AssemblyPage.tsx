@@ -45,13 +45,15 @@ main:
     or $s0, $ra, $zero
     jal fibonacci
 
-    # Now we have the answer in $v0
+    # Now the answer is in $v0
     # NOP here so you can check out register pane
-    add $0, $0, $0
+    # (also serves as a branch delay slot)
+    nop
 
     or $ra, $s0, $zero
     # Terminate the program
     jr $ra
+    nop
 fibonacci:
     # Prologue
     addi $sp, $sp, -12
@@ -62,11 +64,12 @@ fibonacci:
     ori $v0, $zero, 1 # return value for terminal condition
     slti $t0, $16, 3
     bne $t0, $0, fibonacciExit # check terminal condition
-    addi $a0, $s0, -1 # set args for recursive call to f(n-1)
+    nop
     jal fibonacci
+    addi $a0, $s0, -1 # delay slot; set args for recursive call to f(n-1)
     or $s1, $v0, $zero # store result of f(n-1) to s1
-    addi $a0, $s0, -2 # set args for recursive call to f(n-2)
     jal fibonacci
+    addi $a0, $s0, -2 # delay slot; set args for recursive call to f(n-2)
     add $v0, $s1, $v0 # add result of f(n-1) to it
 fibonacciExit:
     # Save value to memory
@@ -81,7 +84,7 @@ fibonacciExit:
     lw $s1, 0($sp)
     addi $sp, $sp, 12
     jr $ra
-    ## End of function fibonacci
+    nop
 `;
 
 interface IState {

@@ -58,7 +58,7 @@ impl Interpreter {
         use Instruction::*;
 
         // set the next pc
-        let mut pc = match self.branch_target.take() {
+        let pc = match self.branch_target.take() {
             Some(x) => x,
             None => self.arch.pc() + 4,
         };
@@ -239,12 +239,12 @@ impl Interpreter {
             }
             jal(x) => {
                 let addr = (pc & 0xf000_0000) | ((x.target & 0x3ff_ffff) << 2);
-                self.set_reg(RegisterName::new(31), pc);
+                self.set_reg(RegisterName::new(31), pc.wrapping_add(4));
                 self.branch_target = Some(addr);
             }
             jalr(x) => {
                 let addr = self.reg(x.rs);
-                self.set_reg(x.rd, pc);
+                self.set_reg(x.rd, pc.wrapping_add(4));
                 self.branch_target = Some(addr);
             }
             jr(x) => {

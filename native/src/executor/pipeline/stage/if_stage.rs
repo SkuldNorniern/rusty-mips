@@ -25,8 +25,8 @@ pub fn if_next(
             pc = _pc + 4;
         }
     }
-    
-    if _id_ex.ctr_unit.if_flush == 0b1{
+
+    if _id_ex.ctr_unit.if_flush == 0b1 {
         if_id.inst = 0x00000000;
     }
 

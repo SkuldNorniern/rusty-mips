@@ -1,4 +1,4 @@
-use crate::component::{Instruction, TypeI, TypeJ, TypeR};
+use crate::component::{Instruction, TypeI, TypeR};
 use crate::executor::error::ExecuteError;
 use crate::executor::{Arch, Interpreter};
 use crate::memory::Memory;

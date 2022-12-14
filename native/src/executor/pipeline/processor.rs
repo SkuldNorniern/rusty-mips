@@ -18,7 +18,6 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-
     pub fn new(mem: Box<dyn Memory>) -> Pipeline {
         Pipeline {
             arch: Arch::new(mem),
