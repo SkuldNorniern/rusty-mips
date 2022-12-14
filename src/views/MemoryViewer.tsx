@@ -52,14 +52,15 @@ interface IProps {
 
 interface IState {
   pageAddr: number
-  memory?: Uint8Array
+  memory: Uint8Array
 }
 
 export const MemoryViewer = ({ initialAddr }: IProps): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
-  const [state, setState] = React.useState<Readonly<IState>>({
-    pageAddr: initialAddr & (~0xfff)
-  });
+  const [state, setState] = React.useState<Readonly<IState>>(() => ({
+    pageAddr: initialAddr & (~0xfff),
+    memory: new Uint8Array(4096)
+  }));
 
   const canGoBack = state.pageAddr > 0;
   const canGoForward = state.pageAddr < 0xfffff000;
@@ -67,16 +68,12 @@ export const MemoryViewer = ({ initialAddr }: IProps): JSX.Element | null => {
 
   React.useEffect(() => {
     if (native.initialized) {
-      const prevArr = state.memory ?? new Uint8Array(4096);
-      const next = native.lib.readMemory(pageIdx, prevArr);
-      setState(prev => ({ ...prev, memory: next }));
+      const next = native.lib.readMemory(pageIdx, state.memory);
+      if (next != null) {
+        setState(prev => ({ ...prev, memory: next }));
+      }
     }
   }, [native, state.pageAddr]);
-
-  const memory = state.memory;
-  if (!native.initialized || memory == null) {
-    return null;
-  }
 
   const handleGoBack = (): void => {
     setState(prev => ({
@@ -96,6 +93,33 @@ export const MemoryViewer = ({ initialAddr }: IProps): JSX.Element | null => {
     }));
   };
 
+  const arr = React.useMemo((): JSX.Element[] | null => {
+    const memory = state.memory;
+    if (memory == null) {
+      return null;
+    }
+
+    return indices.map(i => (
+      <div key={i}>
+        <>[<Address><RadixValue value={state.pageAddr + i * bytesPerRow} format="hex"/></Address>]</>
+        {' '}
+        <Value>
+          {rowIndices.map(j => (
+            <React.Fragment key={i * bytesPerRow + j}>
+              <RadixValue value={memory[i * bytesPerRow + j]} format={'hex'} digits={2}/>
+              {j % 4 === 3 ? ' ' : ''}
+            </React.Fragment>
+          ))}
+        </Value>
+        {rowIndices.map(j => (
+          <React.Fragment key={i * bytesPerRow + j}>
+            {numberToChar(memory[i * bytesPerRow + j])}
+          </React.Fragment>
+        ))}
+      </div>
+    ));
+  }, [state]);
+
   return (
     <Card style={{ display: 'inline-block', overflowY: 'scroll' }} className="code">
       <Root>
@@ -109,25 +133,7 @@ export const MemoryViewer = ({ initialAddr }: IProps): JSX.Element | null => {
           </CurrentPage>
           <Button variant="secondary" disabled={!canGoForward} onClick={handleGoForward}>다음 페이지 →</Button>
         </Pager>
-        {indices.map(i => (
-          <div key={i}>
-            <>[<Address><RadixValue value={state.pageAddr + i * bytesPerRow} format="hex"/></Address>]</>
-            {' '}
-            <Value>
-              {rowIndices.map(j => (
-                <React.Fragment key={i * bytesPerRow + j}>
-                  <RadixValue value={memory[i * bytesPerRow + j]} format={'hex'} digits={2}/>
-                  {j % 4 === 3 ? ' ' : ''}
-                </React.Fragment>
-              ))}
-            </Value>
-            {rowIndices.map(j => (
-              <React.Fragment key={i * bytesPerRow + j}>
-                {numberToChar(memory[i * bytesPerRow + j])}
-              </React.Fragment>
-            ))}
-          </div>
-        ))}
+        {arr}
       </Root>
     </Card>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NativeLibContext } from '../context/NativeLibContext';
-import { Button, Card } from 'react-bootstrap';
+import Card from 'react-bootstrap/Card';
 import styled from '@emotion/styled';
 import RadixValue from '../components/RadixValue';
 

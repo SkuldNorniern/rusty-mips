@@ -1,4 +1,5 @@
 use super::GLOBAL_STATE;
+use crate::webapi::updates::Updates;
 use lazy_static::lazy_static;
 use parking_lot::{Mutex, MutexGuard};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -26,32 +27,37 @@ pub fn start(allow_jit: bool) {
     *guard = Some(spawn(move || run_thread(allow_jit)));
 }
 
-pub fn stop() {
+/// Returns true if was running
+pub fn stop() -> bool {
     FLAG_RUN.store(false, Ordering::Release);
     let mut guard = LOOPER.lock();
     // FIXME: Second unwrap (first is ok because it means thread panicked)
     if let Some(x) = guard.take() {
-        x.join().unwrap().unwrap()
+        x.join().unwrap().unwrap();
+        true
+    } else {
+        false
     }
 }
 
 fn run_thread(allow_jit: bool) -> Option<()> {
     let mut guard = GLOBAL_STATE.lock();
     let mut last_notify_time = Instant::now();
+    let mut updates = Updates::empty();
 
     // Use relaxed here. We acquire below there.
     while FLAG_RUN.load(Ordering::Relaxed) {
         //TODO: Handle exceptions (like overflow)
 
         if allow_jit {
-            guard.as_mut()?.exec_silent().ok()?;
+            updates |= guard.as_mut()?.exec().ok()?;
         } else {
-            guard.as_mut()?.step_silent().ok()?;
+            updates |= guard.as_mut()?.step().ok()?;
         }
 
         let now = Instant::now();
-        if 50 < (now - last_notify_time).as_millis() {
-            guard.as_mut()?.notify_all();
+        if 10 < (now - last_notify_time).as_millis() {
+            guard.as_mut()?.notify(updates);
             MutexGuard::unlock_fair(guard);
 
             // Code here runs mutex unlocked
