@@ -368,7 +368,7 @@ fn try_parse_ins(ctx: &mut LineContext) -> Result<Instruction, AssemblerError> {
     use Instruction::*;
 
     Ok(match ctx.mnemonic {
-        "nop" => slt(Default::default()),
+        "nop" => sll(Default::default()),
 
         "add" => add(try_parse_ins_3arg(ctx)?),
         "addu" => addu(try_parse_ins_3arg(ctx)?),
