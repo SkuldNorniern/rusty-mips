@@ -2,7 +2,6 @@ import React from 'react';
 import styled from '@emotion/styled';
 import SvgPipeline from '../components/SvgPipeline';
 import Registers from '../views/Registers';
-import Card from 'react-bootstrap/Card';
 import Modal from 'react-bootstrap/Modal';
 import { NativeLibContext } from '../context/NativeLibContext';
 import Button from 'react-bootstrap/Button';
@@ -51,6 +50,8 @@ const setStyle = (e: HTMLElement): void => {
 interface IState {
   cycle: number
   showInfo: boolean
+  infoTitle: string
+  infoValue: string
 }
 
 const PipelinePage = (): JSX.Element | null => {
@@ -58,19 +59,29 @@ const PipelinePage = (): JSX.Element | null => {
   const ref = React.useRef<SVGElement>();
   const [state, setState] = React.useState<Readonly<IState>>({
     cycle: 0,
-    showInfo: false
+    showInfo: false,
+    infoTitle: '',
+    infoValue: ''
   });
 
+  const handleOnClick = (id: string): void => {
+    const info = native.state.pipelineDetail[id];
+    setState(prev => ({ ...prev, showInfo: true, infoTitle: info.name, infoValue: info.value }));
+  };
+
   React.useEffect(() => {
-    if (ref.current != null) {
-      const now = document.getElementById('svg-item-memwb-aluout');
-      if (now != null) {
-        setStyle(now);
-        now.onclick = () => setState(prev => ({ ...prev, showInfo: true }));
-        console.log(now);
+    if (ref.current != null && Object.prototype.hasOwnProperty.call(native.state, 'pipelineDetail')) {
+      for (const k of native.state.pipelineDetailList) {
+        const elem = document.getElementById(k);
+        if (elem == null) {
+          continue;
+        }
+
+        setStyle(elem);
+        elem.onclick = handleOnClick.bind(null, k);
       }
     }
-  }, [ref.current]);
+  }, [ref.current, native.state]);
 
   if (!native.initialized) {
     return null;
@@ -82,6 +93,7 @@ const PipelinePage = (): JSX.Element | null => {
 
   const handleCycle = (): void => {
     native.lib.step();
+    setState(prev => ({ ...prev, cycle: prev.cycle + 1 }));
   };
 
   const handleConvertToPipeline = (): void => {
@@ -92,10 +104,10 @@ const PipelinePage = (): JSX.Element | null => {
     <>
       <Modal show={state.showInfo} onHide={handleHide}>
         <Modal.Header closeButton>
-          <Modal.Title>This is info</Modal.Title>
+          <Modal.Title>{state.infoTitle}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          0x12345678
+          {state.infoValue}
         </Modal.Body>
       </Modal>
       <Root>
@@ -117,7 +129,7 @@ const PipelinePage = (): JSX.Element | null => {
           </>}
           <Registers editable={false}/>
         </Panel>
-        <PipelineImage ref={ref} />
+        <PipelineImage ref={ref}/>
       </Root>
     </>
   );

@@ -1281,7 +1281,7 @@ const SvgPipeline = (props, ref) => (
           }}
         />
       </g>
-      <g transform="matrix(1,0,0,1,-9,806.034)" id="svg-item-ifid-ins">
+      <g transform="matrix(1,0,0,1,-9,806.034)" id="svg-item-ifid-inst">
         <rect
           x={1336.61}
           y={1136.01}

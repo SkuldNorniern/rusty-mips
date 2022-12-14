@@ -1,12 +1,13 @@
 use crate::assembler::assemble;
 use crate::component::RegisterName;
 use crate::disassembler::disassemble;
-use crate::executor::{Executor, Interpreter, Jit, Pipeline, HAS_JIT};
+use crate::executor::{Description, Executor, Interpreter, Jit, Pipeline, HAS_JIT};
 use crate::memory::{create_empty_memory, create_memory, EndianMode};
 use crate::webapi::updates::Updates;
 use neon::prelude::*;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
+use std::collections::HashMap;
 use std::mem::swap;
 use std::ops::RangeInclusive;
 use std::sync::Arc;
@@ -146,6 +147,12 @@ impl State {
             [0; 32]
         };
 
+        let pipeline_detail = if updates.contains(Updates::REGISTERS) {
+            self.inner.capture_pipeline_detail()
+        } else {
+            HashMap::new()
+        };
+
         let disasm_mapping = if updates.contains(Updates::DISASSEMBLY) {
             self.inner.capture_disasm()
         } else {
@@ -161,6 +168,28 @@ impl State {
                 let pc = cx.number(pc);
                 obj.set(&mut cx, "regs", regs)?;
                 obj.set(&mut cx, "pc", pc)?;
+
+                if !pipeline_detail.is_empty() {
+                    let details = cx.empty_object();
+                    let entry_list = cx.empty_array();
+                    for (k, v) in &pipeline_detail {
+                        let k = cx.string(k);
+                        let info = cx.empty_object();
+                        let name = cx.string(&v.name);
+                        let value = cx.string(&v.value);
+                        info.set(&mut cx, "name", name)?;
+                        info.set(&mut cx, "value", value)?;
+                        details.set(&mut cx, k, info)?;
+                    }
+
+                    for (i, k) in pipeline_detail.keys().enumerate() {
+                        let value = cx.string(k);
+                        entry_list.set(&mut cx, i as u32, value)?;
+                    }
+
+                    obj.set(&mut cx, "pipelineDetail", details)?;
+                    obj.set(&mut cx, "pipelineDetailList", entry_list)?;
+                }
             }
 
             if updates.contains(Updates::DISASSEMBLY) {
@@ -278,6 +307,14 @@ impl Inner {
         *range = Some(min_addr..=max_addr);
 
         mapping
+    }
+
+    fn capture_pipeline_detail(&self) -> HashMap<String, Description> {
+        if let Executor::ExPipeline(x) = &self.exec {
+            x.get_pipeline_detail()
+        } else {
+            HashMap::new()
+        }
     }
 
     fn capture_running(&self) -> bool {

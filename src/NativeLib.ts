@@ -19,6 +19,15 @@ interface IDisassembly {
   [k: string]: [number, string]
 }
 
+interface IPipelineDetailEntry {
+  name: string
+  value: string
+}
+
+interface IPipelineDetail {
+  [k: string]: IPipelineDetailEntry
+}
+
 interface IModuleStateRaw {
   regs: number[]
   pc: number
@@ -28,5 +37,7 @@ interface IModuleStateRaw {
   cleanAfterReset: boolean
   canUseJit: boolean
   canUsePipeline: boolean
+  pipelineDetail: IPipelineDetail
+  pipelineDetailList: string[]
 }
 export type IModuleState = Readonly<IModuleStateRaw>;
