@@ -98,7 +98,7 @@ impl Pipeline {
         );
         self.if_id = if_tup.0;
         self.arch.set_pc(if_tup.1);
-        self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id, &mut self.id_ex, self.fwd_unit);
+        self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id, &mut self.id_ex,&mut self.ex_mem, self.fwd_unit);
     }
 
     pub fn step(&mut self) {
@@ -516,7 +516,8 @@ mod tests {
 
     #[test]
     fn inst_addi() {
-        let mut proc = make(".text\naddi $18, $0, 0x1");
+        let mut proc = make(".text\naddi $18, $0, 0x1\nnop\nnop\nnop\nnop\nnop\nnop");
+        proc.step();
         proc.step();
         proc.step();
         proc.step();
