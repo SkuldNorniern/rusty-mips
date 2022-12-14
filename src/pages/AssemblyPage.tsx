@@ -3,6 +3,7 @@ import Button from 'react-bootstrap/Button';
 import styled from '@emotion/styled';
 import { NativeLibContext } from '../context/NativeLibContext';
 import { EndianSwitch } from '../views/EndianSwitch';
+import Form from 'react-bootstrap/Form';
 
 const Root = styled.div`
   display: flex;
@@ -67,7 +68,7 @@ fibonacci:
     addi $a0, $s0, -2 # set args for recursive call to f(n-2)
     jal fibonacci
     add $v0, $s1, $v0 # add result of f(n-1) to it
- fibonacciExit:
+fibonacciExit:
     # Save value to memory
     add $t0, $s0, $s0
     add $t0, $t0, $t0  # multiply by 4

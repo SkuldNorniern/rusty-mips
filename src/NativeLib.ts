@@ -9,7 +9,7 @@ export interface NativeLib {
   editRegister: (idx: number, value: number) => void
   readMemory: (pageIdx: number, dst: Uint8Array) => Uint8Array
   step: () => void
-  run: () => void
+  run: (useJit: boolean) => void
   stop: () => void
   getNativeEndian: () => 'big' | 'little'
 }
@@ -25,5 +25,6 @@ interface IModuleStateRaw {
   disasm: IDisassembly
   disasmList: number[]
   cleanAfterReset: boolean
+  canUseJit: boolean
 }
 export type IModuleState = Readonly<IModuleStateRaw>;

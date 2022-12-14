@@ -94,6 +94,7 @@ pub fn create_memory(endian: EndianMode, segments: &[Segment]) -> Box<dyn Memory
 }
 
 /// Only for use in unit tests
+#[cfg(test)]
 pub fn create_memory_fastmem(endian: EndianMode, segments: &[Segment]) -> Box<dyn Memory> {
     create_memory_impl(endian, segments, true)
 }

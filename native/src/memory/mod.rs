@@ -13,5 +13,8 @@ cfg_if::cfg_if! {
 }
 
 pub use endian_mode::EndianMode;
-pub use memory_trait::{create_empty_memory, create_memory, create_memory_fastmem, Memory};
+pub use memory_trait::{create_empty_memory, create_memory, Memory};
 pub use segment::Segment;
+
+#[cfg(test)]
+pub use memory_trait::create_memory_fastmem;

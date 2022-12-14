@@ -8,8 +8,11 @@ edition = "2018"
 resolver = "2"
 exclude = ["index.node"]
 
+[profile.release]
+debug = 1
+
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 snafu = { version="0.7.3", features=["backtraces"]}
@@ -20,6 +23,7 @@ parking_lot = "0.12.1"
 cfg-if = "1.0.0"
 lockfree = "0.5.1"
 dynasmrt = "1.2.3"
+rustc-hash = "1.1.0"
 
 [dependencies.neon]
 version = "1.0.0-alpha"

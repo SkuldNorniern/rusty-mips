@@ -30,4 +30,11 @@ impl Executor {
             Executor::ExJit(x) => x.step(),
         }
     }
+
+    pub fn exec(&mut self) -> Result<(), ExecuteError> {
+        match self {
+            Executor::ExInterpreter(x) => x.step(),
+            Executor::ExJit(x) => x.exec(),
+        }
+    }
 }

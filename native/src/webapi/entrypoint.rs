@@ -89,8 +89,11 @@ fn step(mut cx: FunctionContext) -> JsResult<JsUndefined> {
 }
 
 fn run(mut cx: FunctionContext) -> JsResult<JsUndefined> {
+    let allow_jit = cx.argument::<JsBoolean>(0)?.value(&mut cx);
+
     let state = take_state(&mut cx)?;
-    state.run();
+    state.run(allow_jit);
+
     Ok(cx.undefined())
 }
 

@@ -14,7 +14,7 @@ pub fn is_running() -> bool {
     FLAG_RUN.load(Ordering::Acquire)
 }
 
-pub fn start() {
+pub fn start(allow_jit: bool) {
     FLAG_RUN.store(false, Ordering::Release);
     let mut guard = LOOPER.lock();
     // FIXME: Second unwrap (first is ok because it means thread panicked)
@@ -23,7 +23,7 @@ pub fn start() {
     }
 
     FLAG_RUN.store(true, Ordering::Release);
-    *guard = Some(spawn(run_thread));
+    *guard = Some(spawn(move || run_thread(allow_jit)));
 }
 
 pub fn stop() {
@@ -35,14 +35,19 @@ pub fn stop() {
     }
 }
 
-fn run_thread() -> Option<()> {
+fn run_thread(allow_jit: bool) -> Option<()> {
     let mut guard = GLOBAL_STATE.lock();
     let mut last_notify_time = Instant::now();
 
     // Use relaxed here. We acquire below there.
     while FLAG_RUN.load(Ordering::Relaxed) {
         //TODO: Handle exceptions (like overflow)
-        guard.as_mut()?.step_silent().ok()?;
+
+        if allow_jit {
+            guard.as_mut()?.exec_silent().ok()?;
+        } else {
+            guard.as_mut()?.step_silent().ok()?;
+        }
 
         let now = Instant::now();
         if 50 < (now - last_notify_time).as_millis() {

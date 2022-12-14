@@ -4,7 +4,7 @@ use crate::executor::{Arch, Interpreter};
 use crate::memory::Memory;
 use dynasmrt::x64::Assembler;
 use dynasmrt::{dynasm, AssemblyOffset, DynasmApi, ExecutableBuffer};
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::mem;
 
 type CompiledFunction = extern "win64" fn(&mut Arch, *mut u8);
@@ -18,8 +18,8 @@ struct CompiledCode {
 #[derive(Debug)]
 pub struct Jit {
     interpreter: Interpreter,
-    codes: HashMap<u32, CompiledCode>,
-    failures: HashSet<u32>,
+    codes: FxHashMap<u32, CompiledCode>,
+    failures: FxHashSet<u32>,
 }
 
 impl Jit {
@@ -31,8 +31,8 @@ impl Jit {
 
         Jit {
             interpreter: Interpreter::new(mem),
-            codes: HashMap::new(),
-            failures: HashSet::new(),
+            codes: FxHashMap::default(),
+            failures: FxHashSet::default(),
         }
     }
 
@@ -45,6 +45,10 @@ impl Jit {
     }
 
     pub fn step(&mut self) -> Result<(), ExecuteError> {
+        self.interpreter.step()
+    }
+
+    pub fn exec(&mut self) -> Result<(), ExecuteError> {
         let addr_from = self.interpreter.as_arch().pc();
 
         let code = match self.codes.get(&addr_from) {
@@ -57,6 +61,7 @@ impl Jit {
                 match self.compile(addr_from) {
                     Ok(x) => x,
                     Err(_) => {
+                        self.failures.insert(addr_from);
                         return self.interpreter.step();
                     }
                 }
@@ -170,13 +175,12 @@ impl Jit {
             }
         }
 
-        emit_epilogue(&mut ops, if should_set_pc { Some(addr) } else {None});
+        emit_epilogue(&mut ops, if should_set_pc { Some(addr) } else { None });
 
         let buf = ops.finalize().unwrap();
 
         let code = CompiledCode { offset: label, buf };
-        self.codes.insert(addr_from, code);
-        Ok(self.codes.get(&addr_from).unwrap())
+        Ok(self.codes.entry(addr_from).or_insert(code))
     }
 }
 
@@ -197,6 +201,10 @@ fn emit_epilogue(ops: &mut Assembler, pc: Option<u32>) {
 }
 
 fn emit_add(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     //TODO: Implement overflow exception
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
@@ -206,6 +214,10 @@ fn emit_add(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_and(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; and eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -214,6 +226,10 @@ fn emit_and(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_nor(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; or eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -223,6 +239,10 @@ fn emit_nor(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_or(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; or eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -231,6 +251,10 @@ fn emit_or(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_slt(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
         ; cmp DWORD [rcx + (x.rs.num() as i32) * 4], eax
@@ -241,6 +265,10 @@ fn emit_slt(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_sltu(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
         ; cmp DWORD [rcx + (x.rs.num() as i32) * 4], eax
@@ -251,6 +279,10 @@ fn emit_sltu(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_sub(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; sub eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -259,6 +291,10 @@ fn emit_sub(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_xor(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; xor eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -267,6 +303,10 @@ fn emit_xor(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_sll(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
         ; sal eax, x.shamt as i8
@@ -275,6 +315,10 @@ fn emit_sll(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_sllv(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov r8, rcx
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -286,6 +330,10 @@ fn emit_sllv(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_sra(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
         ; sar eax, x.shamt as i8
@@ -294,6 +342,10 @@ fn emit_sra(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_srav(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov r8, rcx
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -305,6 +357,10 @@ fn emit_srav(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_srl(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
         ; shr eax, x.shamt as i8
@@ -313,6 +369,10 @@ fn emit_srl(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_srlv(ops: &mut Assembler, x: TypeR) {
+    if x.rd.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov r8, rcx
         ; mov eax, DWORD [rcx + (x.rt.num() as i32) * 4]
@@ -324,6 +384,10 @@ fn emit_srlv(ops: &mut Assembler, x: TypeR) {
 }
 
 fn emit_addi(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; add eax, x.imm as i16 as i32
@@ -332,6 +396,10 @@ fn emit_addi(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_andi(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; and eax, x.imm as u32 as i32
@@ -340,12 +408,20 @@ fn emit_andi(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_lui(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov DWORD [rcx + (x.rt.num() as i32) * 4], ((x.imm as u32) << 16) as i32
     );
 }
 
 fn emit_ori(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; or eax, x.imm as u32 as i32
@@ -354,6 +430,10 @@ fn emit_ori(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_slti(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; xor eax, eax
         ; cmp DWORD [rcx + (x.rs.num() as i32) * 4], (x.imm as i16 as i32) - 1
@@ -363,6 +443,10 @@ fn emit_slti(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_sltiu(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; xor eax, eax
         ; cmp DWORD [rcx + (x.rs.num() as i32) * 4], (x.imm as i16 as i32) - 1
@@ -372,6 +456,10 @@ fn emit_sltiu(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_xori(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; xor eax, x.imm as u32 as i32
@@ -380,6 +468,10 @@ fn emit_xori(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_lb(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; add eax, x.imm as i16 as i32
@@ -389,6 +481,10 @@ fn emit_lb(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_lbu(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; add eax, x.imm as i16 as i32
@@ -398,6 +494,10 @@ fn emit_lbu(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_lh(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; add eax, x.imm as i16 as i32
@@ -407,6 +507,10 @@ fn emit_lh(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_lhu(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; add eax, x.imm as i16 as i32
@@ -416,6 +520,10 @@ fn emit_lhu(ops: &mut Assembler, x: TypeI) {
 }
 
 fn emit_lw(ops: &mut Assembler, x: TypeI) {
+    if x.rt.is_zero() {
+        return;
+    }
+
     dynasm!(ops
         ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
         ; add eax, x.imm as i16 as i32
@@ -507,7 +615,7 @@ mod test {
         jit.as_arch_mut().reg[17] = 1;
         jit.as_arch_mut().reg[18] = 2;
 
-        jit.step().unwrap();
+        jit.exec().unwrap();
 
         assert!(jit.codes.contains_key(&0x0040_0024));
         assert_eq!(jit.as_arch_mut().pc(), 0x0040_0028);
@@ -523,7 +631,7 @@ mod test {
         jit.as_arch_mut().reg[17] = 1;
         jit.as_arch_mut().reg[18] = 2;
 
-        jit.step().unwrap();
+        jit.exec().unwrap();
 
         assert!(jit.codes.contains_key(&0x0040_0024));
         assert_eq!(jit.as_arch_mut().pc(), 0x0040_0028);
@@ -539,7 +647,7 @@ mod test {
         jit.as_arch_mut().reg[17] = 1234;
         jit.as_arch_mut().reg[18] = 2;
 
-        jit.step().unwrap();
+        jit.exec().unwrap();
 
         assert!(jit.codes.contains_key(&0x0040_0024));
         assert_eq!(jit.as_arch_mut().pc(), 0x0040_0028);
@@ -560,7 +668,7 @@ mod test {
         let ans_2 = jit.as_arch_mut().mem.read_u32(0x1000_0000 - 1);
         let ans_3 = jit.as_arch_mut().mem.read_u32(0x1000_0000 + 1);
 
-        jit.step().unwrap();
+        jit.exec().unwrap();
 
         assert!(jit.codes.contains_key(&0x0040_0024));
         assert_eq!(jit.as_arch_mut().pc(), 0x0040_0030);
@@ -630,7 +738,7 @@ fibonacciExit:
                 break;
             }
 
-            state.step().unwrap();
+            state.exec().unwrap();
         }
 
         assert_eq!(state.as_arch().pc(), 0);

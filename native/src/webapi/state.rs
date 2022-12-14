@@ -92,8 +92,17 @@ impl State {
         }
     }
 
-    pub fn run(&self) {
-        super::looper::start();
+    pub fn exec_silent(&mut self) -> Result<(), String> {
+        self.inner.clean_after_reset = false;
+        if self.inner.exec.as_arch().pc() < 0x00001000 {
+            Ok(())
+        } else {
+            self.inner.exec.exec().map_err(|x| format!("{:?}", x))
+        }
+    }
+
+    pub fn run(&self, allow_jit: bool) {
+        super::looper::start(allow_jit);
     }
 
     pub fn stop(&self) {
@@ -109,6 +118,7 @@ impl State {
         let pc = self.inner.capture_pc();
         let disasm_mapping = self.inner.capture_disasm();
         let running = self.inner.capture_running();
+        let can_use_jit = self.inner.capture_can_use_jit();
 
         self.channel.send(move |mut cx| {
             let regs = js_array_numbers(&mut cx, regs.iter())?;
@@ -128,6 +138,7 @@ impl State {
             let disasm_list = js_array_numbers(&mut cx, disasm_list.iter())?;
             let running = cx.boolean(running);
             let clean_after_reset = cx.boolean(clean_after_reset);
+            let can_use_jit = cx.boolean(can_use_jit);
 
             let obj = cx.empty_object();
             obj.set(&mut cx, "regs", regs)?;
@@ -136,6 +147,7 @@ impl State {
             obj.set(&mut cx, "disasmList", disasm_list)?;
             obj.set(&mut cx, "running", running)?;
             obj.set(&mut cx, "cleanAfterReset", clean_after_reset)?;
+            obj.set(&mut cx, "canUseJit", can_use_jit)?;
 
             callback
                 .to_inner(&mut cx)
@@ -203,6 +215,13 @@ impl Inner {
 
     fn capture_running(&self) -> bool {
         super::looper::is_running()
+    }
+
+    fn capture_can_use_jit(&self) -> bool {
+        match self.exec {
+            Executor::ExInterpreter(_) => false,
+            Executor::ExJit(_) => true,
+        }
     }
 }
 

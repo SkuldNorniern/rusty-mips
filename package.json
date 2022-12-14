@@ -15,7 +15,7 @@
     "lint": "eslint src --max-warnings=0",
     "clean": "npm run -C native clean & shx --silent rm -r build dist public/index.node",
     "test": "npm run -C native test",
-    "start": "npm run native-build && concurrently -k npm:react-start npm:electron-start",
+    "start": "npm run native-build-release && concurrently -k npm:react-start npm:electron-start",
     "build": "npm run native-build-release && npm run react-build && npm run electron-build",
     "dist": "npm run native-build-release && npm run react-build && npm run electron-dist"
   },

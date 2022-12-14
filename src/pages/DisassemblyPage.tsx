@@ -6,6 +6,7 @@ import { Disassembly } from '../views/Disassembly';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Button from 'react-bootstrap/Button';
 import { NativeLibContext } from '../context/NativeLibContext';
+import Form from 'react-bootstrap/Form';
 
 const Root = styled.div`
   display: flex;
@@ -30,16 +31,24 @@ const Status = styled.div`
   margin-bottom: 1rem;
 `;
 
+interface IState {
+  scrollIntoView: number
+  useJit: boolean
+}
+
 const DisassemblyPage = (): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
-  const [scrollIntoView, setScrollIntoView] = React.useState(0);
+  const [state, setState] = React.useState<Readonly<IState>>({
+    scrollIntoView: 0,
+    useJit: false
+  });
 
   if (!native.initialized) {
     return null;
   }
 
   const handleRun = (): void => {
-    native.lib.run();
+    native.lib.run(state.useJit && native.state.canUseJit);
   };
 
   const handleStop = (): void => {
@@ -50,8 +59,16 @@ const DisassemblyPage = (): JSX.Element | null => {
     native.lib.step();
   };
 
+  const handleChangeJit = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    if (native.state.canUseJit) {
+      setState(prev => ({ ...prev, useJit: e.target.checked }));
+    } else {
+      setState(prev => ({ ...prev, useJit: false }));
+    }
+  };
+
   const handleScrollIntoView = (): void => {
-    setScrollIntoView(prev => (prev + 1) & 0xffff);
+    setState(prev => ({ ...prev, scrollIntoView: (prev.scrollIntoView + 1) & 0xffff }));
   };
 
   return (
@@ -66,7 +83,10 @@ const DisassemblyPage = (): JSX.Element | null => {
             <Button variant="secondary" onClick={handleScrollIntoView}>스크롤 초기화</Button>
           </ButtonGroup>
         </Status>
-        <Disassembly scrollIntoView={scrollIntoView} />
+        <Status>
+          <Form.Switch label="JIT 사용" checked={state.useJit} onChange={handleChangeJit} disabled={!native.state.canUseJit} />
+        </Status>
+        <Disassembly scrollIntoView={state.scrollIntoView} />
       </VerticalAlign>
       <VerticalAlign>
         <Title>데이터 섹션</Title>
