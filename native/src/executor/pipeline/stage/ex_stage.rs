@@ -24,7 +24,7 @@ pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pip
         alu_b = _fwd_unit.fwd_b;
     }
 
-    if alu_a - alu_b ==0 {
+    if alu_a == alu_b{
         ex_mem.zero = 1;
     } else {
         ex_mem.zero = 0;
