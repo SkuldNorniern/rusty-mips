@@ -4,6 +4,7 @@ use crate::executor::pipeline::units::forward_unit;
 pub fn if_next(
     _inst: u32,
     _fwd: forward_unit::FwdUnit,
+    _id_ex: &mut pipes::IdPipe,
     _ex_mem: &mut pipes::ExPipe,
     _pc: u32,
     _finalize: bool,
@@ -24,5 +25,10 @@ pub fn if_next(
             pc = _pc + 4;
         }
     }
+    
+    if _id_ex.ctr_unit.if_flush == 0b1{
+        if_id.inst = 0x00000000;
+    }
+
     (if_id, pc)
 }

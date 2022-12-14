@@ -12,6 +12,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_read: 0b0,
             mem_write: 0b0,
             branch: 0b0,
+            if_flush: pipes::CtrUnitFull::default().if_flush,
         },
         0b100011 => pipes::CtrUnitFull {
             // LW
@@ -23,6 +24,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_read: 0b1,
             mem_write: 0b0,
             branch: 0b0,
+            if_flush: pipes::CtrUnitFull::default().if_flush,
         },
         0b101011 => pipes::CtrUnitFull {
             // SW
@@ -34,6 +36,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_read: 0b1,
             mem_write: 0b0,
             branch: 0b0,
+            if_flush: pipes::CtrUnitFull::default().if_flush,
         },
         0b001000 => pipes::CtrUnitFull {
             // ADDI
@@ -45,6 +48,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_read: 0b0,
             mem_write: 0b0,
             branch: 0b0,
+            if_flush: pipes::CtrUnitFull::default().if_flush,
         },
         0b000100 => pipes::CtrUnitFull {
             // BEQ
@@ -56,6 +60,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_read: 0b0,
             mem_write: 0b0,
             branch: 0b1,
+            if_flush: pipes::CtrUnitFull::default().if_flush,
         },
         0b000101 => pipes::CtrUnitFull {
             // BNE
@@ -67,6 +72,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_read: 0b0,
             mem_write: 0b0,
             branch: 0b1,
+            if_flush: pipes::CtrUnitFull::default().if_flush,
         },
         0b000010 => pipes::CtrUnitFull {
             // J
@@ -78,28 +84,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_read: 0b0,
             mem_write: 0b0,
             branch: 0b1,
-        },
-        0b000011 => pipes::CtrUnitFull {
-            // JAL
-            reg_dst: 0b0,
-            reg_write: 0b0,
-            alu_src: 0b0,
-            alu_op: 0b00,
-            mem_to_reg: 0b0,
-            mem_read: 0b0,
-            mem_write: 0b0,
-            branch: 0b1,
-        },
-        0b100000 => pipes::CtrUnitFull {
-            // LB
-            reg_dst: 0b0,
-            reg_write: 0b1,
-            alu_src: 0b0,
-            alu_op: 0b10,
-            mem_to_reg: 0b0,
-            mem_read: 0b0,
-            mem_write: 0b0,
-            branch: 0b0,
+            if_flush: 0b1,
         },
         _ => pipes::CtrUnitFull::default(),
     }
@@ -119,5 +104,6 @@ mod tests {
         assert_eq!(test.mem_read, 0b0);
         assert_eq!(test.mem_write, 0b0);
         assert_eq!(test.branch, 0b0);
+        assert_eq!(test.if_flush, 0b0);
     }
 }

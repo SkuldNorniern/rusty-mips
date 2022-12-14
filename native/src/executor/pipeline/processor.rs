@@ -18,6 +18,7 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
+
     pub fn new(mem: Box<dyn Memory>) -> Pipeline {
         Pipeline {
             arch: Arch::new(mem),
@@ -79,6 +80,7 @@ impl Pipeline {
         let if_tup = stage::if_stage::if_next(
             cur_inst,
             self.fwd_unit,
+            &mut self.id_ex,
             &mut self.ex_mem,
             self.arch.pc(),
             _finalize,

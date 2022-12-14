@@ -16,6 +16,7 @@ pub fn id_next(_if_id: &mut pipes::IfPipe, _is_hazard: bool, _reg_list: &[u32]) 
         id_ex.ctr_unit.mem_read = 0b0;
         id_ex.ctr_unit.mem_write = 0b0;
         id_ex.ctr_unit.branch = 0b0;
+        id_ex.ctr_unit.if_flush = 0b0;
     } else {
         let opcode = _if_id.inst & 0xFC000000 >> 26;
         id_ex.ctr_unit = control_unit::ctrl_unit(opcode);
@@ -28,6 +29,10 @@ pub fn id_next(_if_id: &mut pipes::IfPipe, _is_hazard: bool, _reg_list: &[u32]) 
     id_ex.rt = (_if_id.inst & 0x001F0000) >> 16;
     id_ex.rd = (_if_id.inst & 0x0000F800) >> 11;
     id_ex.imm = _if_id.inst & 0x0000FFFF;
+    id_ex.ctr_unit.if_flush = 0b0;
+    if id_ex.ctr_unit.branch == 1 && id_ex.data_a == id_ex.data_b {
+        id_ex.ctr_unit.if_flush = 0b1;
+    }
 
     id_ex
 }
