@@ -736,7 +736,7 @@ fibonacciExit:
 
         let mut state = init_state(code);
 
-        for i in 0..1000000 {
+        for _ in 0..100000 {
             let pc = state.as_arch().pc();
             if pc == 0 {
                 break;

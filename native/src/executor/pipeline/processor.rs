@@ -6,7 +6,6 @@ use crate::component::RegisterName;
 use crate::executor::Arch;
 use crate::memory::Memory;
 
-
 #[derive(Debug)]
 pub struct Pipeline {
     arch: Arch,
@@ -74,20 +73,26 @@ impl Pipeline {
         self.id_ex =
             stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, self.arch.regs());
         let mut cur_inst = self.arch.mem.read_u32(self.arch.pc());
-        if _finalize{
+        if _finalize {
             cur_inst = 0x00000000;
         }
-        let if_tup =
-            stage::if_stage::if_next(cur_inst, self.fwd_unit, &mut self.ex_mem, self.arch.pc(),_finalize);
+        let if_tup = stage::if_stage::if_next(
+            cur_inst,
+            self.fwd_unit,
+            &mut self.ex_mem,
+            self.arch.pc(),
+            _finalize,
+        );
         self.if_id = if_tup.0;
         self.arch.set_pc(if_tup.1);
         self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id, &mut self.id_ex, self.fwd_unit);
     }
+
     pub fn step(&mut self) {
         self.next(false);
     }
+
     pub fn finalize(&mut self) {
-        //TODO: execute everything in current pipeline, filling with bubble
         self.next(true);
     }
 }
