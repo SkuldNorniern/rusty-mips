@@ -1,11 +1,11 @@
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct IfPipe {
     pub npc: u32,
     pub inst: u32,
     pub ran: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct CtrUnitFull {
     pub reg_dst: u32,
     pub reg_write: u32,
@@ -17,7 +17,7 @@ pub struct CtrUnitFull {
     pub branch: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct IdPipe {
     pub npc: u32,
     pub data_a: u32,
@@ -30,7 +30,7 @@ pub struct IdPipe {
     pub ran: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct CtrUnitSlim {
     pub reg_write: u32,
     pub mem_to_reg: u32,
@@ -39,7 +39,7 @@ pub struct CtrUnitSlim {
     pub branch: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ExPipe {
     pub branch_tgt: u32,
     pub zero: u32,
@@ -50,7 +50,7 @@ pub struct ExPipe {
     pub ran: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MemPipe {
     pub lmd: u32,
     pub alu_out: u32,
@@ -59,7 +59,7 @@ pub struct MemPipe {
     pub ran: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct WbPipe {
     pub ran: u32,
 }

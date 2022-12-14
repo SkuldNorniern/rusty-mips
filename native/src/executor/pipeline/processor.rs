@@ -1,18 +1,14 @@
 use super::pipes;
 use super::stage;
 use super::units;
+use crate::component::RegisterName;
 
-use crate::assembler::assemble;
-use crate::memory::{create_memory, EndianMode};
-use crate::memory::{Memory, Segment};
+use crate::executor::Arch;
+use crate::memory::Memory;
 
-pub struct Processor {
-    pc: u32,
-    hi: u32,
-    lo: u32,
-    instructions: Vec<Segment>,
-    memory: Box<dyn Memory>,
-    registers: [u32; 32],
+#[derive(Debug)]
+pub struct Pipeline {
+    arch: Arch,
     if_id: pipes::IfPipe,
     id_ex: pipes::IdPipe,
     ex_mem: pipes::ExPipe,
@@ -20,16 +16,11 @@ pub struct Processor {
     wb: pipes::WbPipe,
     fwd_unit: units::forward_unit::FwdUnit,
 }
-impl Processor {
-    pub fn new(_asm: &str) -> Processor {
-        let insts = assemble(EndianMode::native(), _asm).unwrap();
-        Processor {
-            pc: 0x00400024,
-            hi: 0x0,
-            lo: 0x0,
-            instructions: insts.clone(),
-            memory: create_memory(EndianMode::native(), &insts),
-            registers: [0x0; 32],
+
+impl Pipeline {
+    pub fn new(mem: Box<dyn Memory>) -> Pipeline {
+        Pipeline {
+            arch: Arch::new(mem),
             if_id: { pipes::IfPipe::default() },
             id_ex: { pipes::IdPipe::default() },
             ex_mem: { pipes::ExPipe::default() },
@@ -38,7 +29,31 @@ impl Processor {
             fwd_unit: { units::forward_unit::FwdUnit::default() },
         }
     }
-    pub fn next(&mut self) {
+
+    pub fn as_arch(&self) -> &Arch {
+        &self.arch
+    }
+
+    pub fn as_arch_mut(&mut self) -> &mut Arch {
+        &mut self.arch
+    }
+
+    pub fn into_arch(mut self) -> Arch {
+        self.flush();
+        self.arch
+    }
+
+    pub fn reg(&self, name: u32) -> u32 {
+        assert!(name < 32, "register name must be under 32");
+        self.arch.reg(RegisterName::new(name as u8))
+    }
+
+    pub fn set_reg(&mut self, name: u32, val: u32) {
+        assert!(name < 32, "register name must be under 32");
+        self.arch.set_reg(RegisterName::new(name as u8), val);
+    }
+
+    pub fn step(&mut self) {
         self.fwd_unit = stage::forward::fwd_ctrl(
             &mut self.ex_mem,
             &mut self.mem_wb,
@@ -47,122 +62,141 @@ impl Processor {
         );
         let wb_tup = stage::wb_stage::next(&mut self.mem_wb);
         self.wb = wb_tup.0;
-        self.registers[wb_tup.1 .0 as usize] = wb_tup.1 .1;
+        self.set_reg(wb_tup.1 .0, wb_tup.1 .1);
         let lmd_addr = self.ex_mem.alu_out / 4;
-        let mem_tup = stage::mem_stage::next(&mut self.ex_mem, self.memory.read_u32(lmd_addr));
+        let mem_tup = stage::mem_stage::next(&mut self.ex_mem, self.arch.mem.read_u32(lmd_addr));
         self.mem_wb = mem_tup.0;
         if mem_tup.1 .2 {
-            self.memory.write_u32(mem_tup.1 .0, mem_tup.1 .1);
+            self.arch.mem.write_u32(mem_tup.1 .0, mem_tup.1 .1);
         }
         self.ex_mem = stage::ex_stage::next(&mut self.id_ex, self.fwd_unit);
         self.id_ex =
-            stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, self.registers);
-        let cur_inst = self.memory.read_u32(self.pc);
-        let if_tup = stage::if_stage::if_next(cur_inst, self.fwd_unit, &mut self.ex_mem, self.pc);
+            stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, self.arch.regs());
+        let cur_inst = self.arch.mem.read_u32(self.arch.pc());
+        let if_tup =
+            stage::if_stage::if_next(cur_inst, self.fwd_unit, &mut self.ex_mem, self.arch.pc());
         self.if_id = if_tup.0;
-        self.pc = if_tup.1;
+        self.arch.set_pc(if_tup.1);
         self.fwd_unit = stage::hazard::hazard_ctrl(&mut self.if_id, &mut self.id_ex, self.fwd_unit);
+    }
+
+    pub fn flush(&mut self) {
+        //TODO: execute everything in current pipeline, filling with bubble
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assembler::assemble;
+    use crate::memory::{create_memory, EndianMode};
+
+    fn make(asm: &str) -> Pipeline {
+        let native = EndianMode::native();
+        let segs = assemble(native, asm).unwrap();
+        let mem = create_memory(native, &segs);
+        Pipeline::new(mem)
+    }
+
     #[test]
     fn processor_pc_value() {
-        let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        proc.next();
-        assert_eq!(proc.pc, 0x00400028);
+        let mut proc = make(".text\nadd $18, $16, $17");
+        proc.step();
+        assert_eq!(proc.arch.pc(), 0x00400028);
     }
+
     #[test]
     fn processor_cycle_1_inst() {
-        let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        proc.next();
+        let mut proc = make(".text\nadd $18, $16, $17");
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02119020);
     }
+
     #[test]
     fn processor_cycle_2_inst() {
-        let mut proc = Processor::new(".text\nadd $18, $16, $17\nsub $2, $s0, $zero");
-        proc.next();
+        let mut proc = make(".text\nadd $18, $16, $17\nsub $2, $s0, $zero");
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02119020);
-        proc.next();
+        proc.step();
 
         assert_eq!(proc.if_id.inst, 0x02001022);
     }
+
     #[test]
     fn processor_cycle_3_inst() {
-        let mut proc = Processor::new(".text\nadd $18, $16, $17\nsub $2, $s0, $zero");
-        proc.next();
+        let mut proc = make(".text\nadd $18, $16, $17\nsub $2, $s0, $zero");
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02119020);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02001022);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x0);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
         assert_eq!(proc.ex_mem.alu_out, 0x9020);
     }
+
     #[test]
     fn processor_cycle_4_inst() {
         //TODO Finish this test
-        let mut proc =
-            Processor::new(".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5");
-        proc.next();
+        let mut proc = make(".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5");
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02119020);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02001022);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x00858820);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
         assert_eq!(proc.ex_mem.alu_out, 0x9020);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x0);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
         //assert_eq!(proc.ex_mem.alu_out, );
         //assert_eq!(proc.mem_wb.alu_out, );
     }
+
     #[test]
     fn processor_cycle_5_inst() {
         //TODO Finish this test
-        let mut proc = Processor::new(
-            ".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5\nadd $6, $7, $8",
-        );
-        proc.next();
+        let mut proc =
+            make(".text\nadd $18, $16, $17\nsub $2, $s0, $zero\nadd $17, $4, $5\nadd $6, $7, $8");
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02119020);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x02001022);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x00858820);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
         assert_eq!(proc.ex_mem.alu_out, 0x9020);
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x00E83020);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
         //assert_eq!(proc.ex_mem.alu_out, );
         //assert_eq!(proc.mem_wb.alu_out, );
-        proc.next();
+        proc.step();
         assert_eq!(proc.if_id.inst, 0x0);
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
         //assert_eq!(proc.ex_mem.alu_out, );
         //assert_eq!(proc.mem_wb.alu_out, );
-        assert_eq!(proc.registers[18], 0x0);
+        assert_eq!(proc.reg(18), 0x0);
     }
+
     //TODO Add more tests
     #[test]
     fn stage_id_control_unit() {
-        let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        proc.next();
+        let mut proc = make(".text\nadd $18, $16, $17");
+        proc.step();
         let test: u32 = 0x02114020;
         let sample = units::control_unit::ctrl_unit((test & 0xFC000000) >> 26);
 
@@ -175,10 +209,11 @@ mod tests {
         assert_eq!(proc.id_ex.ctr_unit.alu_src, sample.alu_src);
         assert_eq!(proc.id_ex.ctr_unit.reg_write, sample.reg_write);
     }
+
     #[test]
     fn stage_id_datas() {
-        let mut proc = Processor::new(".text\nadd $18, $16, $17");
-        proc.next();
+        let mut proc = make(".text\nadd $18, $16, $17");
+        proc.step();
         assert_eq!(proc.id_ex.data_a, 0x0);
         assert_eq!(proc.id_ex.data_b, 0x0);
     }

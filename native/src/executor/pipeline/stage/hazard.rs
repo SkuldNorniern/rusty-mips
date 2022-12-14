@@ -1,5 +1,5 @@
-use crate::architecture::pipes;
-use crate::architecture::units::forward_unit;
+use crate::executor::pipeline::pipes;
+use crate::executor::pipeline::units::forward_unit;
 
 pub fn hazard_ctrl(
     _if_id: &mut pipes::IfPipe,

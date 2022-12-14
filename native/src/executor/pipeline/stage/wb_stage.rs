@@ -1,4 +1,4 @@
-use crate::architecture::pipes;
+use crate::executor::pipeline::pipes;
 
 pub fn next(_mem_wb: &mut pipes::MemPipe) -> (pipes::WbPipe, (u32, u32)) {
     let mut wb = pipes::WbPipe::default();

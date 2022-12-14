@@ -1,4 +1,4 @@
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct FwdUnit {
     pub fwd_a: u32,
     pub fwd_b: u32,
@@ -6,6 +6,7 @@ pub struct FwdUnit {
     pub pc_write: bool,
     pub hazard: bool,
 }
+
 impl Default for FwdUnit {
     fn default() -> FwdUnit {
         FwdUnit {

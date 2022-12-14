@@ -44,6 +44,10 @@ impl Jit {
         self.interpreter.as_arch_mut()
     }
 
+    pub fn into_arch(self) -> Arch {
+        self.interpreter.into_arch()
+    }
+
     pub fn step(&mut self) -> Result<(), ExecuteError> {
         self.interpreter.step()
     }

@@ -1,13 +1,11 @@
-use crate::architecture::pipes;
-use crate::architecture::units::control_unit;
+use crate::executor::pipeline::pipes;
+use crate::executor::pipeline::units::control_unit;
 
-pub fn id_next(
-    _if_id: &mut pipes::IfPipe,
-    _is_hazard: bool,
-    _reg_list: [u32; 32],
-) -> pipes::IdPipe {
-    let mut id_ex = pipes::IdPipe::default();
-    id_ex.ran = _if_id.ran;
+pub fn id_next(_if_id: &mut pipes::IfPipe, _is_hazard: bool, _reg_list: &[u32]) -> pipes::IdPipe {
+    let mut id_ex = pipes::IdPipe {
+        ran: _if_id.ran,
+        ..Default::default()
+    };
 
     if _is_hazard {
         id_ex.ctr_unit.reg_dst = 0b0;

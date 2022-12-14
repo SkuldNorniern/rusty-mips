@@ -1,4 +1,3 @@
-mod architecture;
 mod assembler;
 mod component;
 mod disassembler;

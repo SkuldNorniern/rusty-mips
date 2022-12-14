@@ -1,4 +1,4 @@
-use crate::architecture::pipes;
+use crate::executor::pipeline::pipes;
 
 pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
     match opcode {

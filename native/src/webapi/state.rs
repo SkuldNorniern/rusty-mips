@@ -221,6 +221,7 @@ impl Inner {
         match self.exec {
             Executor::ExInterpreter(_) => false,
             Executor::ExJit(_) => true,
+            Executor::ExPipeline(_) => false,
         }
     }
 }

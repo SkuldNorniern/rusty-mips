@@ -1,10 +1,11 @@
-use crate::architecture::pipes;
-use crate::architecture::units::forward_unit;
-use crate::architecture::units::function_unit;
+use crate::executor::pipeline::pipes;
+use crate::executor::pipeline::units::{forward_unit, function_unit};
 
 pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pipes::ExPipe {
-    let mut ex_mem = pipes::ExPipe::default();
-    ex_mem.ran = _id_ex.ran;
+    let mut ex_mem = pipes::ExPipe {
+        ran: _id_ex.ran,
+        ..Default::default()
+    };
 
     ex_mem.ctr_unit.mem_to_reg = _id_ex.ctr_unit.mem_to_reg;
     ex_mem.ctr_unit.mem_read = _id_ex.ctr_unit.mem_read;
