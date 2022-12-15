@@ -21,13 +21,11 @@ main:
 
     # Now the answer is in $v0
     # NOP here so you can check out register pane
-    # (also serves as a branch delay slot)
     nop
 
     or $ra, $s0, $zero
     # Terminate the program
     jr $ra
-    nop
 fibonacci:
     # Prologue
     addi $sp, $sp, -12
@@ -40,12 +38,11 @@ fibonacci:
     sw $v0, 4($gp)
     slti $t0, $16, 3
     bne $t0, $0, fibonacciExit # check terminal condition
-    nop
+    addi $a0, $s0, -1 # set args for recursive call to f(n-1)
     jal fibonacci
-    addi $a0, $s0, -1 # delay slot; set args for recursive call to f(n-1)
     or $s1, $v0, $zero # store result of f(n-1) to s1
+    addi $a0, $s0, -2 # set args for recursive call to f(n-2)
     jal fibonacci
-    addi $a0, $s0, -2 # delay slot; set args for recursive call to f(n-2)
     add $v0, $s1, $v0 # add result of f(n-1) to it
 fibonacciExit:
     # Save value to memory
@@ -58,8 +55,7 @@ fibonacciExit:
     lw $s0, 4($sp)
     lw $s1, 0($sp)
     addi $sp, $sp, 12
-    jr $ra
-    nop`
+    jr $ra`
   },
   {
     name: '간단한 덧셈',
@@ -81,7 +77,6 @@ main:
     # (결과로 0xd가 나와야 함)
     addi $a0, $0, 7
     j fibonacci
-    nop
 fibonacci:
     addi $t0, $0, 0
     addi $t1, $0, 1
@@ -97,12 +92,9 @@ loop:
     addi $gp, $gp, 4
     addi $t2, $t2, -1
     beq $t2, $0, endFibonacci
-    nop
     j loop
-    nop
 endFibonacci:
     or $v0, $0, $t1
-    j 0x00000000
-    nop`
+    j 0x00000000`
   }
 ];

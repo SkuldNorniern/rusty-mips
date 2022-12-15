@@ -18,9 +18,9 @@ pub fn is_running() -> bool {
 pub fn start(allow_jit: bool) {
     FLAG_RUN.store(false, Ordering::Release);
     let mut guard = LOOPER.lock();
+    // FIXME: Second unwrap (first is ok because it means thread panicked)
     if let Some(x) = guard.take() {
-        // FIXME: handle error
-        let _ = x.join().unwrap();
+        x.join().unwrap().unwrap()
     }
 
     FLAG_RUN.store(true, Ordering::Release);
@@ -31,9 +31,9 @@ pub fn start(allow_jit: bool) {
 pub fn stop() -> bool {
     FLAG_RUN.store(false, Ordering::Release);
     let mut guard = LOOPER.lock();
+    // FIXME: Second unwrap (first is ok because it means thread panicked)
     if let Some(x) = guard.take() {
-        // FIXME: handle error
-        let _ = x.join().unwrap();
+        x.join().unwrap().unwrap();
         true
     } else {
         false

@@ -1,4 +1,4 @@
-use crate::component::{Instruction, TypeI, TypeR};
+use crate::component::{Instruction, TypeI, TypeJ, TypeR};
 use crate::executor::error::ExecuteError;
 use crate::executor::{Arch, Interpreter};
 use crate::memory::Memory;
@@ -53,10 +53,6 @@ impl X64Jit {
     }
 
     pub fn exec(&mut self) -> Result<(), ExecuteError> {
-        if self.interpreter.is_branch_delay() {
-            return self.interpreter.step();
-        }
-
         let addr_from = self.interpreter.as_arch().pc();
 
         let code = match self.codes.get(&addr_from) {
@@ -104,6 +100,7 @@ impl X64Jit {
 
         let mem = self.interpreter.as_arch().mem();
 
+        let mut should_set_pc = true;
         let mut addr = addr_from;
         let mut ops = Assembler::new().unwrap();
         let label = ops.offset();
@@ -149,6 +146,26 @@ impl X64Jit {
                 sb(x) => emit_sb(&mut ops, x),
                 sh(x) => emit_sh(&mut ops, x),
                 sw(x) => emit_sw(&mut ops, x),
+                j(x) => {
+                    emit_j(&mut ops, x, addr);
+                    should_set_pc = false;
+                    break; // basic block finished
+                }
+                jal(x) => {
+                    emit_jal(&mut ops, x, addr);
+                    should_set_pc = false;
+                    break; // basic block finished
+                }
+                jalr(x) => {
+                    emit_jalr(&mut ops, x, addr);
+                    should_set_pc = false;
+                    break; // basic block finished
+                }
+                jr(x) => {
+                    emit_jr(&mut ops, x);
+                    should_set_pc = false;
+                    break; //basic block finished
+                }
                 _ => {
                     // unsupported instruction (branches and syscall)
                     if i == 0 {
@@ -162,7 +179,7 @@ impl X64Jit {
             }
         }
 
-        emit_epilogue(&mut ops, Some(addr));
+        emit_epilogue(&mut ops, if should_set_pc { Some(addr) } else { None });
 
         let buf = ops.finalize().unwrap();
 
@@ -546,6 +563,35 @@ fn emit_sw(ops: &mut Assembler, x: TypeI) {
     );
 }
 
+fn emit_j(ops: &mut Assembler, x: TypeJ, pc: u32) {
+    dynasm!(ops
+        ; mov eax, (pc & 0xf000_0000) as i32
+        ; or eax, (x.target << 2) as i32
+        ; mov DWORD [rcx + 32*4], eax
+    );
+}
+
+fn emit_jal(ops: &mut Assembler, x: TypeJ, pc: u32) {
+    emit_j(ops, x, pc);
+    dynasm!(ops
+        ; mov DWORD [rcx + 31 * 4], pc as i32
+    );
+}
+
+fn emit_jalr(ops: &mut Assembler, x: TypeR, pc: u32) {
+    emit_jr(ops, x);
+    dynasm!(ops
+        ; mov DWORD [rcx + (x.rd.num() as i32) * 4], pc as i32
+    );
+}
+
+fn emit_jr(ops: &mut Assembler, x: TypeR) {
+    dynasm!(ops
+        ; mov eax, DWORD [rcx + (x.rs.num() as i32) * 4]
+        ; mov DWORD [rcx + 32*4], eax
+    );
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -653,13 +699,11 @@ main:
 
     # Now we have the answer in $v0
     # NOP here so you can check out register pane
-    # (also serves as a branch delay slot)
-    nop
+    add $0, $0, $0
 
     or $ra, $s0, $zero
     # Terminate the program
     jr $ra
-    nop
 fibonacci:
     # Prologue
     addi $sp, $sp, -12
@@ -670,12 +714,11 @@ fibonacci:
     ori $v0, $zero, 1 # return value for terminal condition
     slti $t0, $16, 3
     bne $t0, $0, fibonacciExit # check terminal condition
-    nop
+    addi $a0, $s0, -1 # set args for recursive call to f(n-1)
     jal fibonacci
-    addi $a0, $s0, -1 # delay slot; set args for recursive call to f(n-1)
     or $s1, $v0, $zero # store result of f(n-1) to s1
+    addi $a0, $s0, -2 # set args for recursive call to f(n-2)
     jal fibonacci
-    addi $a0, $s0, -2 # delay slot; set args for recursive call to f(n-2)
     add $v0, $s1, $v0 # add result of f(n-1) to it
 fibonacciExit:
     # Save value to memory
@@ -689,8 +732,7 @@ fibonacciExit:
     lw $s0, 4($sp)
     lw $s1, 0($sp)
     addi $sp, $sp, 12
-    jr $ra
-    nop";
+    jr $ra";
 
         let mut state = init_state(code);
 

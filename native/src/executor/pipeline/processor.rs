@@ -495,6 +495,7 @@ mod tests {
         proc.step();
         assert_eq!(proc.reg(18), 0x1);
     }
+
     #[test]
     fn inst_lw() {
         let mut proc = make(
