@@ -139,6 +139,14 @@ impl Pipeline {
 
         // IF/ID
         map.insert(
+            "debug-if-pc".to_string(),
+            Description {
+                id: "debug-if-pc".to_string(),
+                name: "Current PC".to_string(),
+                value: format!("{:08x}", self.if_id.ran),
+            },
+        );
+        map.insert(
             "svg-item-ifid-npc".to_string(),
             Description {
                 id: "svg_item_if_id_npc".to_string(),
@@ -156,6 +164,14 @@ impl Pipeline {
         );
 
         // ID/EX
+        map.insert(
+            "debug-id-pc".to_string(),
+            Description {
+                id: "debug-id-pc".to_string(),
+                name: "Current PC".to_string(),
+                value: format!("{:08x}", self.id_ex.ran),
+            },
+        );
         map.insert(
             "svg-item-idex-npc".to_string(),
             Description {
@@ -214,6 +230,14 @@ impl Pipeline {
         );
 
         // ID/EX Control
+        map.insert(
+            "debug-ex-pc".to_string(),
+            Description {
+                id: "debug-ex-pc".to_string(),
+                name: "Current PC".to_string(),
+                value: format!("{:08x}", self.ex_mem.ran),
+            },
+        );
         map.insert(
             "svg-item-idex-regdst".to_string(),
             Description {
@@ -280,6 +304,14 @@ impl Pipeline {
         );
 
         // EX/MEM
+        map.insert(
+            "debug-mem-pc".to_string(),
+            Description {
+                id: "debug-mem-pc".to_string(),
+                name: "Current PC".to_string(),
+                value: format!("{:08x}", self.mem_wb.ran),
+            },
+        );
         map.insert(
             "svg-item-exmem-brtgt".to_string(),
             Description {
@@ -364,6 +396,14 @@ impl Pipeline {
         );
 
         // MEM/WB
+        map.insert(
+            "debug-wb-pc".to_string(),
+            Description {
+                id: "debug-wb-pc".to_string(),
+                name: "Current PC".to_string(),
+                value: format!("{:08x}", self.wb.ran),
+            },
+        );
         map.insert(
             "svg-item-memwb-lmd".to_string(),
             Description {
@@ -590,10 +630,8 @@ mod tests {
         proc.step();
         proc.step();
         assert_eq!(proc.reg(16), 0x1);
-        assert_eq!(proc.reg(17), 0x1);
+        assert_eq!(proc.reg(17), 0x0);
         assert_eq!(proc.reg(18), 0x0);
         assert_eq!(proc.reg(19), 0x1);
-
-        assert_eq!(proc.arch.mem.read_u32(0x10008000), 0x1);
     }
 }
