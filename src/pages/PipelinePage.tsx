@@ -37,10 +37,18 @@ const ButtonHolder = styled.div`
   margin: 1rem;
 `;
 
-const PipelineImage = styled(SvgPipeline)`
-  flex-shrink: 1;
+const ImageArea = styled.div`
+  flex-grow: 1;
   cursor: auto;
   user-select: none;
+  height: 100%;
+  width: 100%;
+  overflow-x: scroll;
+`;
+
+const ImageHolder = styled.div`
+  height: 100%;
+  overflow: clip;
 `;
 
 const setStyle = (e: HTMLElement): void => {
@@ -56,7 +64,8 @@ interface IState {
 
 const PipelinePage = (): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
-  const ref = React.useRef<SVGElement>();
+  const imageRef = React.useRef<SVGElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const [state, setState] = React.useState<Readonly<IState>>({
     cycle: 0,
     showInfo: false,
@@ -70,7 +79,7 @@ const PipelinePage = (): JSX.Element | null => {
   };
 
   React.useEffect(() => {
-    if (ref.current != null && Object.prototype.hasOwnProperty.call(native.state, 'pipelineDetail')) {
+    if (imageRef.current != null && Object.prototype.hasOwnProperty.call(native.state, 'pipelineDetail')) {
       for (const k of native.state.pipelineDetailList) {
         const elem = document.getElementById(k);
         if (elem == null) {
@@ -80,8 +89,80 @@ const PipelinePage = (): JSX.Element | null => {
         setStyle(elem);
         elem.onclick = handleOnClick.bind(null, k);
       }
+      for (const stage of ['if', 'id', 'ex', 'mem', 'wb']) {
+        const key = `debug-${stage}-pc`;
+        const elem = document.getElementById(`svg-item-debug-${stage}-ins`);
+        if (elem == null) {
+          continue;
+        }
+
+        const detail = native.state.pipelineDetail[key];
+        if (detail == null) {
+          continue;
+        }
+
+        const ins = ((): string | null => {
+          const addr = Number.parseInt(detail.value, 16);
+          if (addr == null) {
+            return null;
+          }
+
+          const info = native.state.disasm[addr.toString()];
+          if (info == null) {
+            return null;
+          } else {
+            return info[1];
+          }
+        })();
+        elem.textContent = ins ?? '(unknown)';
+      }
     }
-  }, [ref.current, native.state]);
+  }, [imageRef.current, native.state]);
+
+  React.useEffect(() => {
+    if (containerRef.current == null) {
+      return;
+    }
+
+    const calcWidth = (w: number, h: number): string | null => {
+      const newWidth = h / 2880 * 5400;
+      if (Math.abs(w - newWidth) < 2) {
+        return null;
+      } else {
+        return `${newWidth}px`;
+      }
+    };
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        let newWidth: string | null;
+
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        if (entry.borderBoxSize) {
+          newWidth = calcWidth(
+            entry.borderBoxSize[0].inlineSize,
+            entry.borderBoxSize[0].blockSize
+          );
+        } else {
+          newWidth = calcWidth(
+            entry.contentRect.width,
+            entry.contentRect.height
+          );
+        }
+
+        if (newWidth != null) {
+          // @ts-expect-error
+          entry.target.style.width = newWidth;
+        }
+      }
+    });
+
+    observer.observe(containerRef.current);
+
+    return function cleanup () {
+      observer.disconnect();
+    };
+  }, [containerRef.current]);
 
   if (!native.initialized) {
     return null;
@@ -98,6 +179,7 @@ const PipelinePage = (): JSX.Element | null => {
 
   const handleConvertToPipeline = (): void => {
     native.lib.convertToPipeline();
+    setState(prev => ({ ...prev, cycle: 0 }));
   };
 
   return (
@@ -129,7 +211,11 @@ const PipelinePage = (): JSX.Element | null => {
           </>}
           <Registers editable={false}/>
         </Panel>
-        <PipelineImage ref={ref}/>
+        <ImageArea>
+          <ImageHolder ref={containerRef}>
+            <SvgPipeline ref={imageRef}/>
+          </ImageHolder>
+        </ImageArea>
       </Root>
     </>
   );

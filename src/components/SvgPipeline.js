@@ -5,7 +5,7 @@ const SvgPipeline = (props, ref) => (
   <svg
     width="100%"
     height="100%"
-    viewBox="0 0 5120 2880"
+    viewBox="0 -50 5400 2880"
     xmlns="http://www.w3.org/2000/svg"
     xmlnsXlink="http://www.w3.org/1999/xlink"
     xmlSpace="preserve"
@@ -19,6 +19,66 @@ const SvgPipeline = (props, ref) => (
     ref={ref}
     {...props}
   >
+    <text
+      id="svg-item-debug-if-ins"
+      x="400px"
+      y="20px"
+      style={{
+        fontFamily: '\'ArialMT\', \'Arial\', sans-serif',
+        fontSize: '70px',
+        fill: '#EF562D'
+      }}
+    >
+      {''}
+    </text>
+    <text
+      id="svg-item-debug-id-ins"
+      x="1370px"
+      y="20px"
+      style={{
+        fontFamily: '\'ArialMT\', \'Arial\', sans-serif',
+        fontSize: '70px',
+        fill: '#EF562D'
+      }}
+    >
+      {''}
+    </text>
+    <text
+      id="svg-item-debug-ex-ins"
+      x="2400px"
+      y="20px"
+      style={{
+        fontFamily: '\'ArialMT\', \'Arial\', sans-serif',
+        fontSize: '70px',
+        fill: '#EF562D'
+      }}
+    >
+      {''}
+    </text>
+    <text
+      id="svg-item-debug-mem-ins"
+      x="3500px"
+      y="20px"
+      style={{
+        fontFamily: '\'ArialMT\', \'Arial\', sans-serif',
+        fontSize: '70px',
+        fill: '#EF562D'
+      }}
+    >
+      {''}
+    </text>
+    <text
+      id="svg-item-debug-wb-ins"
+      x="4550px"
+      y="20px"
+      style={{
+        fontFamily: '\'ArialMT\', \'Arial\', sans-serif',
+        fontSize: '70px',
+        fill: '#EF562D'
+      }}
+    >
+      {''}
+    </text>
     <g transform="matrix(1.41712,0,0,1.41712,304.368,907.496)">
       <rect
         x={182.303}
