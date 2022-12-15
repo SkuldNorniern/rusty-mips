@@ -13,7 +13,7 @@ pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pip
     ex_mem.ctr_unit.branch = _id_ex.ctr_unit.branch;
     ex_mem.ctr_unit.reg_write = _id_ex.ctr_unit.reg_write;
 
-    ex_mem.branch_tgt = _id_ex.npc + (_id_ex.imm << 2);
+    ex_mem.branch_tgt = _id_ex.npc.wrapping_add(_id_ex.imm << 2);
 
     let alu_a = _fwd_unit.fwd_a;
     let mut alu_b = _fwd_unit.fwd_b;
@@ -28,9 +28,9 @@ pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pip
     }
     let mut out = 0;
     if _id_ex.ctr_unit.alu_op == 0 {
-        out = alu_a + alu_b;
+        out = alu_a.wrapping_add(alu_b);
     } else if _id_ex.ctr_unit.alu_op == 1 {
-        out = alu_a - alu_b;
+        out = alu_a.wrapping_sub(alu_b);
     } else if _id_ex.ctr_unit.alu_op == 2 {
         let funct = _id_ex.imm & 0x0000003F;
         let shamt = _id_ex.imm & 0x000007C0;

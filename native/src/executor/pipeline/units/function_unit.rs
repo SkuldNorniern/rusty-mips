@@ -1,7 +1,7 @@
 pub fn funct_unit(_funct: u32, _alu_a: u32, _alu_b: u32, _shamt: u32) -> u32 {
     match _funct {
-        0b100000 => _alu_a + _alu_b,    //add
-        0b100010 => _alu_a - _alu_b,    //sub
+        0b100000 => _alu_a.wrapping_add(_alu_b),    //add
+        0b100010 => _alu_a.wrapping_sub(_alu_b),    //sub
         0b100100 => _alu_a & _alu_b,    //and
         0b100101 => _alu_a | _alu_b,    //or
         0b000000 => _alu_a << _shamt,   //sll

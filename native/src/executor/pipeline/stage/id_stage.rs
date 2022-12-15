@@ -33,7 +33,7 @@ pub fn id_next(
     id_ex.rs = (_if_id.inst & 0x03E00000) >> 21;
     id_ex.rt = (_if_id.inst & 0x001F0000) >> 16;
     id_ex.rd = (_if_id.inst & 0x0000F800) >> 11;
-    id_ex.imm = (_if_id.inst as u16 as i16 as i32 as u32);
+    id_ex.imm = _if_id.inst as u16 as i16 as i32 as u32;
     id_ex.ctr_unit.if_flush = 0b0;
 
     if id_ex.ctr_unit.branch == 1 && id_ex.data_a == id_ex.data_b {
