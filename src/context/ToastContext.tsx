@@ -86,7 +86,7 @@ export const ToastProvider = ({ children }: IProps): JSX.Element => {
     const toast = state.toasts.get(k);
     if (toast != null) {
       arr.push(
-        <Toast key={k} show={toast.isShown} onClose={() => onHideToast(k)} delay={3000} autohide>
+        <Toast key={k} show={toast.isShown} onClose={() => onHideToast(k)} delay={5000} autohide>
           <Toast.Header><Title>{toast.title}</Title></Toast.Header>
           <Toast.Body>{toast.value}</Toast.Body>
         </Toast>
