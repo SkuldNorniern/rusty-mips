@@ -16,6 +16,7 @@ pub struct CtrUnitFull {
     pub mem_write: u32,
     pub branch: u32,
     pub if_flush: u32,
+    pub load_use: u32,
 }
 
 #[derive(Default, Debug)]

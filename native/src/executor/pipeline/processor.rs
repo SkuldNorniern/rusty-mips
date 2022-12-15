@@ -106,6 +106,13 @@ impl Pipeline {
         if _finalize {
             cur_inst = 0x00000000;
         }
+        println!("{:?}", self.fwd_unit);
+        self.fwd_unit = stage::hazard::hazard_ctrl(
+            &mut self.if_id,
+            &mut self.id_ex,
+            &mut self.ex_mem,
+            self.fwd_unit,
+        );
         let if_tup = stage::if_stage::if_next(
             cur_inst,
             self.fwd_unit,
@@ -117,13 +124,6 @@ impl Pipeline {
         println!("IF  : inst: {}", self.if_id.inst);
         self.if_id = if_tup.0;
         self.arch.set_pc(if_tup.1);
-
-        self.fwd_unit = stage::hazard::hazard_ctrl(
-            &mut self.if_id,
-            &mut self.id_ex,
-            &mut self.ex_mem,
-            self.fwd_unit,
-        );
     }
 
     pub fn step(&mut self) {
@@ -633,5 +633,22 @@ mod tests {
         assert_eq!(proc.reg(17), 0x0);
         assert_eq!(proc.reg(18), 0x0);
         assert_eq!(proc.reg(19), 0x1);
+    }
+    #[test]
+    fn load_use() {
+        let mut proc = make(".data 0x10008000\n.word 1\n.text\n.globl main\nmain:\naddi $s1, $0,1\nlw $s0, 0($gp)\nadd $s2, $s0, $s1");
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        proc.step();
+        assert_eq!(proc.reg(17), 0x1);
+        assert_eq!(proc.reg(18), 0x2);
     }
 }

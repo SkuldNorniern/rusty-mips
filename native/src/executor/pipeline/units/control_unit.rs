@@ -13,6 +13,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_write: 0b0,
             branch: 0b0,
             if_flush: pipes::CtrUnitFull::default().if_flush,
+            load_use: pipes::CtrUnitFull::default().load_use,
         },
         0b100011 => pipes::CtrUnitFull {
             // LW
@@ -25,6 +26,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_write: 0b0,
             branch: 0b0,
             if_flush: pipes::CtrUnitFull::default().if_flush,
+            load_use: 0b1,
         },
         0b101011 => pipes::CtrUnitFull {
             // SW
@@ -37,6 +39,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_write: 0b1,
             branch: 0b0,
             if_flush: pipes::CtrUnitFull::default().if_flush,
+            load_use: pipes::CtrUnitFull::default().load_use,
         },
         0b001000 => pipes::CtrUnitFull {
             // ADDI
@@ -49,6 +52,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_write: 0b0,
             branch: 0b0,
             if_flush: pipes::CtrUnitFull::default().if_flush,
+            load_use: pipes::CtrUnitFull::default().load_use,
         },
         0b000100 => pipes::CtrUnitFull {
             // BEQ
@@ -61,6 +65,7 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             mem_write: 0b0,
             branch: 0b1,
             if_flush: pipes::CtrUnitFull::default().if_flush,
+            load_use: pipes::CtrUnitFull::default().load_use,
         },
         _ => pipes::CtrUnitFull::default(),
     }

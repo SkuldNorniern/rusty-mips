@@ -5,7 +5,6 @@ pub struct FwdUnit {
     pub if_id_write: bool,
     pub pc_write: bool,
     pub hazard: bool,
-    pub branch_hazard: bool,
 }
 
 impl Default for FwdUnit {
@@ -16,7 +15,6 @@ impl Default for FwdUnit {
             if_id_write: true,
             pc_write: true,
             hazard: false,
-            branch_hazard: true,
         }
     }
 }

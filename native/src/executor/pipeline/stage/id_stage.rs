@@ -25,6 +25,8 @@ pub fn id_next(
     } else {
         let opcode = (_if_id.inst & 0xFC000000) >> 26;
         id_ex.ctr_unit = control_unit::ctrl_unit(opcode);
+        println!("IDEX: opcode {:?}", opcode);
+        println!("IDEX: load use{:?}", id_ex.ctr_unit.load_use);
     }
 
     id_ex.npc = _if_id.npc;
