@@ -10,6 +10,6 @@ pub fn funct_unit(_funct: u32, _alu_a: u32, _alu_b: u32, _shamt: u32) -> u32 {
         0b100111 => !(_alu_a | _alu_b),          //nor
         0b011000 => _alu_a * _alu_b,             //mult
         0b011001 => _alu_a / _alu_b,             //div
-        _ => panic!("Invalid funct code"),
+        _ => {println!("Invalid funct code {}",_funct); 0},
     }
 }

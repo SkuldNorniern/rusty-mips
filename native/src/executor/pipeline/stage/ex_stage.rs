@@ -35,7 +35,12 @@ pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pip
         let funct = _id_ex.imm & 0x0000003F;
         let shamt = _id_ex.imm & 0x000007C0;
         out = function_unit::funct_unit(funct, alu_a, alu_b, shamt);
+    } else if _id_ex.ctr_unit.alu_op == 3 {
+        let target = (_id_ex.rs << 21) | (_id_ex.rt << 16) | _id_ex.imm;
+        let addr = (_id_ex.npc & 0xf0000000) | (target << 2);
+        ex_mem.branch_tgt = addr;
     }
+
     ex_mem.alu_out = out;
     ex_mem.data_b = _fwd_unit.fwd_b;
 

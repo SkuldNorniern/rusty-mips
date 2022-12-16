@@ -67,6 +67,19 @@ pub fn ctrl_unit(opcode: u32) -> pipes::CtrUnitFull {
             if_flush: pipes::CtrUnitFull::default().if_flush,
             load_use: pipes::CtrUnitFull::default().load_use,
         },
+        0b000010 => pipes::CtrUnitFull {
+            // J
+            reg_dst: 0b0,
+            reg_write: 0b0,
+            alu_src: 0b0,
+            alu_op: 0b11,
+            mem_to_reg: 0b0,
+            mem_read: 0b0,
+            mem_write: 0b0,
+            branch: 0b1,
+            if_flush: pipes::CtrUnitFull::default().if_flush,
+            load_use: pipes::CtrUnitFull::default().load_use,
+        },
         _ => pipes::CtrUnitFull::default(),
     }
 }
