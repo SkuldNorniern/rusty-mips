@@ -96,5 +96,73 @@ loop:
 endFibonacci:
     or $v0, $0, $t1
     j 0x00000000`
+  },
+  {
+    name: '버블정렬',
+    code: `
+.data 0x10008000
+.word 5 1 4 2 3
+
+.text
+.globl main
+main:
+    or      $a0, $0, $gp
+    addi    $a1, $0, 5
+
+    j       bubblesort
+    nop
+
+bubblesort:  # prototype: void bubblesort(int* arr, int len)
+    addi    $15, $0, 1
+    slt     $15, $5, $15
+    beq     $15, $0, .L8
+    nop
+
+    j       .L1
+    nop
+.L8:
+    addi    $2, $0, 1
+    beq     $5, $2, .L1
+    nop
+
+    sll     $7, $5, 2
+    add     $7, $4, $7
+    or      $9, $0, $0
+    addi    $10, $4, 4
+.L6:
+    or      $2, $10, $0
+    or      $8, $0, $0
+.L4:
+    lw      $3, -4($2)
+    lw      $4, 0($2)
+    nop
+    slt     $6, $4, $3
+    beq     $6, $0, .L3
+    nop
+
+    sw      $4, -4($2)
+    sw      $3, 0($2)
+    addi    $8, $0, 1
+.L3:
+    addi    $2, $2, 4
+    beq     $7, $2, .L7
+    nop
+
+    j       .L4
+    nop
+.L7:
+    beq     $8, $0, .L1
+    nop
+
+    addi    $9, $9, 1
+    beq     $5, $9, .L1
+    nop
+
+    j       .L6
+    nop
+
+.L1:
+    j       0x00000000
+    nop`
   }
 ];

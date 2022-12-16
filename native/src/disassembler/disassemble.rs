@@ -35,7 +35,7 @@ fn format_type_branch_2arg(mnemonic: &str, x: TypeI) -> String {
 }
 
 fn format_type_branch_1arg(mnemonic: &str, x: TypeI) -> String {
-    format!("{} ${}, {}", mnemonic, x.rt.name(), x.imm as u32 * 4)
+    format!("{} ${}, {}", mnemonic, x.rs.name(), x.imm as u32 * 4)
 }
 
 fn format_type_memory(mnemonic: &str, x: TypeI) -> String {
