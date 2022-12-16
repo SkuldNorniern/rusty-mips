@@ -28,8 +28,8 @@ fn format_type_branch_2arg(mnemonic: &str, x: TypeI) -> String {
     format!(
         "{} ${}, ${}, {}",
         mnemonic,
-        x.rt.name(),
         x.rs.name(),
+        x.rt.name(),
         x.imm as u32 * 4
     )
 }
