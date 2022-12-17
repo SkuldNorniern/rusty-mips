@@ -1,54 +1,50 @@
 use crate::executor::pipeline::pipes;
-use crate::executor::pipeline::units::{forward_unit, function_unit};
+use crate::executor::pipeline::units::alu_unit::AluOp;
+use crate::executor::pipeline::units::{alu_unit, forward_unit};
+use crate::executor::Arch;
 
-pub fn next(_id_ex: &mut pipes::IdPipe, _fwd_unit: forward_unit::FwdUnit) -> pipes::ExPipe {
-    let mut ex_mem = pipes::ExPipe {
-        ran: _id_ex.ran,
-        ..Default::default()
+pub fn ex_next(
+    ex_input: &pipes::IdPipe,
+    arch: &Arch,
+    mem_input: &pipes::ExPipe,
+    wb_input: &pipes::MemPipe,
+) -> pipes::ExPipe {
+    let data_a = forward_unit::forward_value(ex_input.rs, arch, mem_input, wb_input);
+    let data_b = forward_unit::forward_value(ex_input.rt, arch, mem_input, wb_input);
+
+    let alu_out = match ex_input.opcode {
+        0 => {
+            let shamt = (ex_input.imm & 0x000007C0) >> 6;
+            let funct = ex_input.imm & 0x0000003F;
+            let op = match funct {
+                0x00 => AluOp::Sll,
+                0x20 | 0x21 => AluOp::Add,
+                0x22 | 0x23 => AluOp::Sub,
+                0x24 => AluOp::And,
+                0x25 => AluOp::Or,
+                0x2a => AluOp::Slt,
+                _ => {
+                    println!("unknown funct {}", funct);
+                    AluOp::Add
+                }
+            };
+            alu_unit::alu_unit(data_a, data_b, shamt, op)
+        }
+        0x8 | 0x23 | 0x2b => data_a.wrapping_add(ex_input.imm),
+        _ => 0,
     };
 
-    ex_mem.ctr_unit.mem_to_reg = _id_ex.ctr_unit.mem_to_reg;
-    ex_mem.ctr_unit.mem_read = _id_ex.ctr_unit.mem_read;
-    ex_mem.ctr_unit.mem_write = _id_ex.ctr_unit.mem_write;
-    ex_mem.ctr_unit.branch = _id_ex.ctr_unit.branch;
-    ex_mem.ctr_unit.reg_write = _id_ex.ctr_unit.reg_write;
-
-    ex_mem.branch_tgt = _id_ex.npc.wrapping_add(_id_ex.imm << 2);
-
-    let alu_a = _fwd_unit.fwd_a;
-    let mut alu_b = _fwd_unit.fwd_b;
-    if _id_ex.ctr_unit.alu_src == 1 {
-        alu_b = _id_ex.imm;
-    }
-
-    if alu_a == alu_b {
-        ex_mem.zero = 1;
+    let rd = if ex_input.ctr_unit.reg_dst {
+        ex_input.rd
     } else {
-        ex_mem.zero = 0;
-    }
-    let mut out = 0;
-    if _id_ex.ctr_unit.alu_op == 0 {
-        out = alu_a.wrapping_add(alu_b);
-    } else if _id_ex.ctr_unit.alu_op == 1 {
-        out = alu_a.wrapping_sub(alu_b);
-    } else if _id_ex.ctr_unit.alu_op == 2 {
-        let funct = _id_ex.imm & 0x0000003F;
-        let shamt = _id_ex.imm & 0x000007C0;
-        out = function_unit::funct_unit(funct, alu_a, alu_b, shamt);
-    } else if _id_ex.ctr_unit.alu_op == 3 {
-        let target = (_id_ex.rs << 21) | (_id_ex.rt << 16) | _id_ex.imm;
-        let addr = (_id_ex.npc & 0xf0000000) | (target << 2);
-        ex_mem.branch_tgt = addr;
-    }
+        ex_input.rt
+    };
 
-    ex_mem.alu_out = out;
-    ex_mem.data_b = _fwd_unit.fwd_b;
-
-    if _id_ex.ctr_unit.reg_dst == 1 {
-        ex_mem.rd = _id_ex.rd;
-    } else {
-        ex_mem.rd = _id_ex.rt;
+    pipes::ExPipe {
+        alu_out,
+        data_b,
+        rd,
+        ctr_unit: ex_input.ctr_unit.clone(),
+        debug_pc: ex_input.debug_pc,
     }
-
-    ex_mem
 }

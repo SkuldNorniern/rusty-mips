@@ -1,16 +1,22 @@
+use crate::component::RegisterName;
 use crate::executor::pipeline::pipes;
+use crate::executor::Arch;
 
-pub fn next(_mem_wb: &mut pipes::MemPipe) -> (pipes::WbPipe, (u32, u32)) {
-    let mut wb = pipes::WbPipe::default();
-    let mut reg_data = (0, 0);
-    wb.ran = _mem_wb.ran;
+pub fn wb_next(wb_input: &pipes::MemPipe, arch: &mut Arch) -> pipes::WbPipe {
+    let value = if wb_input.ctr_unit.mem_to_reg {
+        wb_input.lmd
+    } else {
+        wb_input.alu_out
+    };
 
-    if _mem_wb.ctr_unit.reg_write == 1 && _mem_wb.rd != 0 {
-        if _mem_wb.ctr_unit.mem_to_reg == 1 {
-            reg_data = (_mem_wb.rd, _mem_wb.lmd);
-        } else {
-            reg_data = (_mem_wb.rd, _mem_wb.alu_out);
-        }
+    if wb_input.ctr_unit.reg_write {
+        arch.set_reg(RegisterName::new(wb_input.rd as u8), value);
     }
-    (wb, reg_data)
+
+    pipes::WbPipe {
+        rd: wb_input.rd,
+        data: value,
+        ctr_unit: wb_input.ctr_unit.clone(),
+        debug_pc: wb_input.debug_pc,
+    }
 }

@@ -1,46 +1,43 @@
 use crate::executor::pipeline::pipes;
-use crate::executor::pipeline::units::control_unit;
+use crate::executor::pipeline::units::{control_unit, forward_unit};
+use crate::executor::Arch;
+use std::process::id;
 
 pub fn id_next(
-    _if_id: &mut pipes::IfPipe,
-    _is_hazard: bool,
-    _data_a: u32,
-    _data_b: u32,
+    id_input: &pipes::IfPipe,
+    arch: &Arch,
+    mem_input: &pipes::ExPipe,
+    wb_input: &pipes::MemPipe,
 ) -> pipes::IdPipe {
-    let mut id_ex = pipes::IdPipe {
-        ran: _if_id.ran,
-        ..Default::default()
-    };
+    let opcode = (id_input.inst & 0xFC000000) >> 26;
+    let rs = (id_input.inst & 0x03E00000) >> 21;
+    let rt = (id_input.inst & 0x001F0000) >> 16;
+    let rd = (id_input.inst & 0x0000F800) >> 11;
+    let imm = id_input.inst as u16 as i16 as i32 as u32;
 
-    if _is_hazard {
-        id_ex.ctr_unit.reg_dst = 0b0;
-        id_ex.ctr_unit.reg_write = 0b0;
-        id_ex.ctr_unit.alu_src = 0b0;
-        id_ex.ctr_unit.alu_op = 0b0;
-        id_ex.ctr_unit.mem_to_reg = 0b0;
-        id_ex.ctr_unit.mem_read = 0b0;
-        id_ex.ctr_unit.mem_write = 0b0;
-        id_ex.ctr_unit.branch = 0b0;
-        id_ex.ctr_unit.if_flush = 0b0;
-    } else {
-        let opcode = (_if_id.inst & 0xFC000000) >> 26;
-        id_ex.ctr_unit = control_unit::ctrl_unit(opcode);
-        println!("IDEX: opcode {:?}", opcode);
-        println!("IDEX: load use{:?}", id_ex.ctr_unit.load_use);
+    let jump_target = (id_input.npc & 0xF0000000) | ((id_input.inst & 0x03FFFFFF) << 2);
+    let jump_taken = opcode == 2 || opcode == 3;
+
+    let branch_target = (imm << 2).wrapping_add(id_input.npc);
+    let ctr_unit = control_unit::ctrl_unit(opcode);
+    let data_a = forward_unit::forward_value(rs, arch, mem_input, wb_input);
+    let data_b = forward_unit::forward_value(rt, arch, mem_input, wb_input);
+    let branch_taken = ctr_unit.branch && data_a == data_b;
+
+    pipes::IdPipe {
+        npc: id_input.npc,
+        data_a,
+        data_b,
+        opcode,
+        rs,
+        rt,
+        rd,
+        imm,
+        ctr_unit,
+        branch_target,
+        branch_taken,
+        jump_target,
+        jump_taken,
+        debug_pc: id_input.debug_pc,
     }
-
-    id_ex.npc = _if_id.npc;
-    id_ex.data_a = _data_a;
-    id_ex.data_b = _data_b;
-    id_ex.rs = (_if_id.inst & 0x03E00000) >> 21;
-    id_ex.rt = (_if_id.inst & 0x001F0000) >> 16;
-    id_ex.rd = (_if_id.inst & 0x0000F800) >> 11;
-    id_ex.imm = _if_id.inst as u16 as i16 as i32 as u32;
-    id_ex.ctr_unit.if_flush = 0b0;
-
-    if id_ex.ctr_unit.branch == 1 && id_ex.data_a == id_ex.data_b {
-        id_ex.ctr_unit.if_flush = 0b1;
-    }
-
-    id_ex
 }

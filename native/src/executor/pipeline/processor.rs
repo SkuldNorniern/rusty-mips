@@ -1,10 +1,17 @@
 use super::pipes;
 use super::stage;
 use super::units;
-use crate::component::RegisterName;
+use crate::component::{Instruction, RegisterName};
 use crate::executor::Arch;
 use crate::memory::Memory;
 
+use crate::disassembler::disassemble;
+use crate::executor::pipeline::stage::ex_stage::ex_next;
+use crate::executor::pipeline::stage::id_stage::id_next;
+use crate::executor::pipeline::stage::if_stage::if_next;
+use crate::executor::pipeline::stage::mem_stage::mem_next;
+use crate::executor::pipeline::stage::wb_stage::wb_next;
+use crate::executor::pipeline::units::hazard_unit::hazard_ctrl;
 use std::collections::HashMap;
 
 pub struct Description {
@@ -21,19 +28,17 @@ pub struct Pipeline {
     ex_mem: pipes::ExPipe,
     mem_wb: pipes::MemPipe,
     wb: pipes::WbPipe,
-    fwd_unit: units::forward_unit::FwdUnit,
 }
 
 impl Pipeline {
     pub fn new(mem: Box<dyn Memory>) -> Pipeline {
         Pipeline {
             arch: Arch::new(mem),
-            if_id: { pipes::IfPipe::default() },
-            id_ex: { pipes::IdPipe::default() },
-            ex_mem: { pipes::ExPipe::default() },
-            mem_wb: { pipes::MemPipe::default() },
-            wb: { pipes::WbPipe::default() },
-            fwd_unit: { units::forward_unit::FwdUnit::default() },
+            if_id: pipes::IfPipe::default(),
+            id_ex: pipes::IdPipe::default(),
+            ex_mem: pipes::ExPipe::default(),
+            mem_wb: pipes::MemPipe::default(),
+            wb: pipes::WbPipe::default(),
         }
     }
 
@@ -60,70 +65,84 @@ impl Pipeline {
         self.arch.set_reg(RegisterName::new(name as u8), val);
     }
 
-    pub fn next(&mut self, _finalize: bool) {
-        println!("PROC: step: {}", self.arch.pc());
-        self.fwd_unit = stage::forward::fwd_ctrl(
-            &mut self.ex_mem,
-            &mut self.mem_wb,
-            &mut self.id_ex,
-            self.fwd_unit,
-        );
-        println!(
-            "WB  : memtoreg: {}, regwrite: {}",
-            self.mem_wb.ctr_unit.mem_to_reg, self.mem_wb.ctr_unit.reg_write
-        );
-        let wb_tup = stage::wb_stage::next(&mut self.mem_wb);
-        self.wb = wb_tup.0;
-        println!("WB  : addr: {}, data: {}", wb_tup.1 .0, wb_tup.1 .1);
-        self.set_reg(wb_tup.1 .0, wb_tup.1 .1);
-        println!("REG : addr 18 data {}", self.reg(18));
-        let lmd_addr = self.ex_mem.alu_out;
-
-        let lmd = self.arch.mem.read_u32(lmd_addr);
-        println!("MEM : lmd_addr: {}", lmd_addr);
-        println!("MEM : lmd: {}", lmd);
-        println!("MEM : ex_rd: {}", self.ex_mem.rd);
-        let mem_tup = stage::mem_stage::next(&mut self.ex_mem, lmd);
-        self.mem_wb = mem_tup.0;
-        println!("MEM : addr : {}, data: {}", mem_tup.1 .0, mem_tup.1 .1);
-        if mem_tup.1 .2 {
-            self.arch.mem.write_u32(mem_tup.1 .0, mem_tup.1 .1);
+    pub fn next(&mut self, finalize: bool) {
+        cfg_if::cfg_if! {
+            if #[cfg(test)] {
+                const LOG_OUTPUT: bool = true;
+            } else {
+                const LOG_OUTPUT: bool = false;
+            }
         }
 
-        self.ex_mem = stage::ex_stage::next(&mut self.id_ex, self.fwd_unit);
-
-        let data_a_addr = (self.if_id.inst & 0x03E00000) >> 21;
-        let data_a = self.reg(data_a_addr);
-        let data_b_addr = (self.if_id.inst & 0x001F0000) >> 16;
-        let data_b = self.reg(data_b_addr);
-        println!("ID  : data_a: {}, data_b: {}", data_a, data_b);
-        println!("ID  : id_rd: {}", self.id_ex.rd);
-        println!("ID  : id_rs: {}", self.id_ex.rs);
-        println!("ID  : id_rt: {}", self.id_ex.rt);
-        self.id_ex =
-            stage::id_stage::id_next(&mut self.if_id, self.fwd_unit.hazard, data_a, data_b);
-        let mut cur_inst = self.arch.mem.read_u32(self.arch.pc());
-        if _finalize {
-            cur_inst = 0x00000000;
+        if LOG_OUTPUT {
+            println!("PROC: step: {:08x}", self.arch.pc());
         }
-        println!("{:?}", self.fwd_unit);
-        self.fwd_unit = stage::hazard::hazard_ctrl(
-            &mut self.if_id,
-            &mut self.id_ex,
-            &mut self.ex_mem,
-            self.fwd_unit,
-        );
-        let if_tup = stage::if_stage::if_next(
-            cur_inst,
-            self.fwd_unit,
-            &mut self.id_ex,
-            &mut self.ex_mem,
-            self.arch.pc(),
-            _finalize,
-        );
-        println!("IF  : inst: {}", self.if_id.inst);
-        self.if_id = if_tup.0;
-        self.arch.set_pc(if_tup.1);
+
+        let fetch_pc = self.as_arch().pc();
+        let fetch_ins = self.arch.mem.read_u32(fetch_pc);
+
+        let if_output = if_next(fetch_pc, fetch_ins, finalize);
+        let id_output = id_next(&self.if_id, &self.arch, &self.ex_mem, &self.mem_wb);
+        let ex_output = ex_next(&self.id_ex, &self.arch, &self.ex_mem, &self.mem_wb);
+        let mem_output = mem_next(&self.ex_mem, &mut self.arch);
+        let wb_output = wb_next(&self.mem_wb, &mut self.arch);
+
+        let hazard = hazard_ctrl(&if_output, &id_output, &ex_output, &mem_output);
+
+        let next_pc = if id_output.branch_taken {
+            id_output.branch_target
+        } else if id_output.jump_taken {
+            id_output.jump_target
+        } else {
+            self.arch.pc().wrapping_add(4)
+        };
+
+        if LOG_OUTPUT {
+            let read_disassemble = |debug_pc: Option<u32>| {
+                disassemble(self.arch.mem.read_u32(debug_pc.unwrap_or(0)))
+            };
+
+            println!("IF ins: {}", disassemble(if_output.inst));
+            println!("IF: {:?}", if_output);
+            println!(
+                "ID ins: {}",
+                read_disassemble(id_output.debug_pc)
+            );
+            println!("ID: {:?}", id_output);
+            println!(
+                "EX ins: {}",
+                read_disassemble(ex_output.debug_pc)
+            );
+            println!("EX: {:?}", ex_output);
+            println!(
+                "MEM ins: {}",
+                read_disassemble(mem_output.debug_pc)
+            );
+            println!("MEM: {:?}", mem_output);
+            println!(
+                "WB ins: {}",
+                read_disassemble(wb_output.debug_pc)
+            );
+            println!("WB: {:?}", wb_output);
+            println!("Hazard: {:?}", hazard);
+            println!("Next PC: {:08x}", next_pc);
+            println!();
+        }
+
+        self.mem_wb = mem_output;
+        self.ex_mem = ex_output;
+        self.id_ex = id_output;
+
+        if !hazard.redo_if && !hazard.drop_if {
+            self.if_id = if_output;
+        } else {
+            self.if_id = Default::default();
+        }
+
+        if !hazard.redo_if && !finalize {
+            // advance PC if we're not re-fetching current instruction
+            self.arch.set_pc(next_pc);
+        }
     }
 
     pub fn step(&mut self) {
@@ -136,325 +155,16 @@ impl Pipeline {
 
     pub(crate) fn get_pipeline_detail(&self) -> HashMap<String, Description> {
         let mut map = HashMap::new();
-
-        // IF/ID
-        map.insert(
-            "debug-if-pc".to_string(),
-            Description {
-                id: "debug-if-pc".to_string(),
-                name: "Current PC".to_string(),
-                value: format!("{:08x}", self.if_id.ran),
-            },
-        );
-        map.insert(
-            "svg-item-ifid-npc".to_string(),
-            Description {
-                id: "svg_item_if_id_npc".to_string(),
-                name: "Next PC".to_string(),
-                value: format!("0x{:08x}", self.if_id.npc),
-            },
-        );
-        map.insert(
-            "svg-item-ifid-inst".to_string(),
-            Description {
-                id: "svg_item_if_id_inst".to_string(),
-                name: "Instruction".to_string(),
-                value: format!("0x{:08x}", self.if_id.inst),
-            },
-        );
-
-        // ID/EX
-        map.insert(
-            "debug-id-pc".to_string(),
-            Description {
-                id: "debug-id-pc".to_string(),
-                name: "Current PC".to_string(),
-                value: format!("{:08x}", self.id_ex.ran),
-            },
-        );
-        map.insert(
-            "svg-item-idex-npc".to_string(),
-            Description {
-                id: "svg_item_id_ex_npc".to_string(),
-                name: "Next PC".to_string(),
-                value: format!("0x{:08x}", self.id_ex.npc),
-            },
-        );
-        map.insert(
-            "svg-item-idex-a".to_string(),
-            Description {
-                id: "svg_item_id_ex_data_a".to_string(),
-                name: "Data A".to_string(),
-                value: format!("0x{:08x}", self.id_ex.data_a),
-            },
-        );
-        map.insert(
-            "svg-item-idex-b".to_string(),
-            Description {
-                id: "svg_item_id_ex_data_b".to_string(),
-                name: "Data B".to_string(),
-                value: format!("0x{:08x}", self.id_ex.data_b),
-            },
-        );
-        map.insert(
-            "svg-item-idex-imm".to_string(),
-            Description {
-                id: "svg_item_id_ex_imm".to_string(),
-                name: "Immediate".to_string(),
-                value: format!("0x{:08x}", self.id_ex.imm),
-            },
-        );
-        map.insert(
-            "svg-item-idex-rs".to_string(),
-            Description {
-                id: "svg_item_id_ex_rs".to_string(),
-                name: "RS".to_string(),
-                value: format!("0x{:08x}", self.id_ex.rs),
-            },
-        );
-        map.insert(
-            "svg-item-idex-rt".to_string(),
-            Description {
-                id: "svg_item_id_ex_rt".to_string(),
-                name: "RT".to_string(),
-                value: format!("0x{:08x}", self.id_ex.rt),
-            },
-        );
-        map.insert(
-            "svg-item-idex-rd".to_string(),
-            Description {
-                id: "svg_item_id_ex_rd".to_string(),
-                name: "RD".to_string(),
-                value: format!("0x{:08x}", self.id_ex.rd),
-            },
-        );
-
-        // ID/EX Control
-        map.insert(
-            "debug-ex-pc".to_string(),
-            Description {
-                id: "debug-ex-pc".to_string(),
-                name: "Current PC".to_string(),
-                value: format!("{:08x}", self.ex_mem.ran),
-            },
-        );
-        map.insert(
-            "svg-item-idex-regdst".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_reg_dst".to_string(),
-                name: "RegDst".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.reg_dst),
-            },
-        );
-        map.insert(
-            "svg-item-idex-regwrite".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_reg_write".to_string(),
-                name: "RegWrite".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.reg_write),
-            },
-        );
-        map.insert(
-            "svg-item-idex-memread".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_mem_read".to_string(),
-                name: "MemRead".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.mem_read),
-            },
-        );
-        map.insert(
-            "svg-item-idex-memwrite".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_mem_write".to_string(),
-                name: "MemWrite".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.mem_write),
-            },
-        );
-        map.insert(
-            "svg-item-idex-memtoreg".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_mem_to_reg".to_string(),
-                name: "MemToReg".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.mem_to_reg),
-            },
-        );
-        map.insert(
-            "svg-item-idex-aluop".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_alu_op".to_string(),
-                name: "ALUOp".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.alu_op),
-            },
-        );
-        map.insert(
-            "svg-item-idex-alusrc".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_alu_src".to_string(),
-                name: "ALUSrc".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.alu_src),
-            },
-        );
-        map.insert(
-            "svg-item-idex-branch".to_string(),
-            Description {
-                id: "svg_item_id_ex_ctrl_branch".to_string(),
-                name: "Branch".to_string(),
-                value: format!("{}", self.id_ex.ctr_unit.branch),
-            },
-        );
-
-        // EX/MEM
-        map.insert(
-            "debug-mem-pc".to_string(),
-            Description {
-                id: "debug-mem-pc".to_string(),
-                name: "Current PC".to_string(),
-                value: format!("{:08x}", self.mem_wb.ran),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-brtgt".to_string(),
-            Description {
-                id: "svg_item_ex_mem_br_tgt".to_string(),
-                name: "Branch Target".to_string(),
-                value: format!("0x{:08x}", self.ex_mem.branch_tgt),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-zero".to_string(),
-            Description {
-                id: "svg_item_ex_mem_zero".to_string(),
-                name: "Zero".to_string(),
-                value: format!("0x{:08x}", self.ex_mem.zero),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-aluout".to_string(),
-            Description {
-                id: "svg_item_ex_mem_alu_out".to_string(),
-                name: "ALU Out".to_string(),
-                value: format!("0x{:08x}", self.ex_mem.alu_out),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-b".to_string(),
-            Description {
-                id: "svg_item_ex_mem_data_b".to_string(),
-                name: "Data B".to_string(),
-                value: format!("0x{:08x}", self.ex_mem.data_b),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-rd".to_string(),
-            Description {
-                id: "svg_item_ex_mem_rd".to_string(),
-                name: "RD".to_string(),
-                value: format!("0x{:08x}", self.ex_mem.rd),
-            },
-        );
-
-        // EX/MEM Control
-        map.insert(
-            "svg-item-exmem-regwrite".to_string(),
-            Description {
-                id: "svg_item_ex_mem_ctrl_reg_write".to_string(),
-                name: "RegWrite".to_string(),
-                value: format!("{}", self.ex_mem.ctr_unit.reg_write),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-memread".to_string(),
-            Description {
-                id: "svg_item_ex_mem_ctrl_mem_read".to_string(),
-                name: "MemRead".to_string(),
-                value: format!("{}", self.ex_mem.ctr_unit.mem_read),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-memwrite".to_string(),
-            Description {
-                id: "svg_item_ex_mem_ctrl_mem_write".to_string(),
-                name: "MemWrite".to_string(),
-                value: format!("{}", self.ex_mem.ctr_unit.mem_write),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-memtoreg".to_string(),
-            Description {
-                id: "svg_item_ex_mem_ctrl_mem_to_reg".to_string(),
-                name: "MemToReg".to_string(),
-                value: format!("{}", self.ex_mem.ctr_unit.mem_to_reg),
-            },
-        );
-        map.insert(
-            "svg-item-exmem-branch".to_string(),
-            Description {
-                id: "svg_item_ex_mem_ctrl_branch".to_string(),
-                name: "Branch".to_string(),
-                value: format!("{}", self.ex_mem.ctr_unit.branch),
-            },
-        );
-
-        // MEM/WB
-        map.insert(
-            "debug-wb-pc".to_string(),
-            Description {
-                id: "debug-wb-pc".to_string(),
-                name: "Current PC".to_string(),
-                value: format!("{:08x}", self.wb.ran),
-            },
-        );
-        map.insert(
-            "svg-item-memwb-lmd".to_string(),
-            Description {
-                id: "svg_item_mem_wb_lmd".to_string(),
-                name: "LMD".to_string(),
-                value: format!("0x{:08x}", self.mem_wb.lmd),
-            },
-        );
-        map.insert(
-            "svg-item-memwb-aluout".to_string(),
-            Description {
-                id: "svg_item_mem_wb_alu_out".to_string(),
-                name: "ALU Out".to_string(),
-                value: format!("0x{:08x}", self.mem_wb.alu_out),
-            },
-        );
-        map.insert(
-            "svg-item-memwb-rd".to_string(),
-            Description {
-                id: "svg_item_mem_wb_rd".to_string(),
-                name: "RD".to_string(),
-                value: format!("0x{:08x}", self.mem_wb.rd),
-            },
-        );
-
-        // MEM/WB Control
-        map.insert(
-            "svg-item-memwb-regwrite".to_string(),
-            Description {
-                id: "svg_item_mem_wb_ctrl_reg_write".to_string(),
-                name: "RegWrite".to_string(),
-                value: format!("{}", self.mem_wb.ctr_unit.reg_write),
-            },
-        );
-        map.insert(
-            "svg-item-memwb-memtoreg".to_string(),
-            Description {
-                id: "svg_item_mem_wb_ctrl_mem_to_reg".to_string(),
-                name: "MemToReg".to_string(),
-                value: format!("{}", self.mem_wb.ctr_unit.mem_to_reg),
-            },
-        );
-
         map
     }
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
     use crate::assembler::assemble;
+    use crate::disassembler::disassemble;
+    use crate::executor::Interpreter;
     use crate::memory::{create_memory, EndianMode};
 
     fn make(asm: &str) -> Pipeline {
@@ -553,6 +263,7 @@ mod tests {
         proc.step();
         assert_eq!(proc.reg(18), 0x1);
     }
+
     #[test]
     fn inst_sw_lw() {
         let mut proc = make(".text\naddi $18, $0, 0x1\nsw $18, 0($gp)\nlw $19, 0($gp)\nnop\nnop\nnop\nnop\nnop\nnop");
@@ -567,9 +278,11 @@ mod tests {
         assert_eq!(proc.reg(19), 0x1);
         //panic!()
     }
+
     #[test]
     fn inst_add() {
         let mut proc = make(".text\naddi $t0, $0, 1\naddi $t1, $0, 2\nadd $t2, $t1, $t0");
+        proc.step();
         proc.step();
         proc.step();
         proc.step();
@@ -581,6 +294,7 @@ mod tests {
         proc.step();
         assert_eq!(proc.reg(10), 0x3);
     }
+
     #[test]
     fn many_nop() {
         let mut proc = make(".text\nnop\nnop\nnop\nnop");
@@ -612,6 +326,7 @@ mod tests {
         assert_eq!(proc.reg(8), 0x1);
         assert_eq!(proc.arch.mem.read_u32(0x10008000), 0x1);
     }
+
     #[test]
     fn inst_beq() {
         let mut proc = make(".text\na:\naddi $s0, $0, 1\nbeq $0, $0, b\naddi $s1, $0, 1\naddi $s2, $0, 1\nb:\naddi $s3, $0, 1");
@@ -634,6 +349,7 @@ mod tests {
         assert_eq!(proc.reg(18), 0x0);
         assert_eq!(proc.reg(19), 0x1);
     }
+
     #[test]
     fn load_use() {
         let mut proc = make(".data 0x10008000\n.word 1\n.text\n.globl main\nmain:\naddi $s1, $0,1\nlw $s0, 0($gp)\nadd $s2, $s0, $s1");
@@ -653,8 +369,9 @@ mod tests {
     }
 
     #[test]
-    fn asdflnsjafnjksnvjkern() {
-        let mut proc = make(r".data 0x10008000
+    fn bubblesort() {
+        let code = r"
+.data 0x10008000
 .word 5 1 4 2 3
 
 .text
@@ -662,22 +379,17 @@ mod tests {
 main:
     or      $a0, $0, $gp
     addi    $a1, $0, 5
-
     j       bubblesort
-    nop
 
 bubblesort:  # prototype: void bubblesort(int* arr, int len)
     addi    $15, $0, 1
     slt     $15, $5, $15
     beq     $15, $0, .L8
-    nop
 
     j       .L1
-    nop
 .L8:
     addi    $2, $0, 1
     beq     $5, $2, .L1
-    nop
 
     sll     $7, $5, 2
     add     $7, $4, $7
@@ -689,10 +401,8 @@ bubblesort:  # prototype: void bubblesort(int* arr, int len)
 .L4:
     lw      $3, -4($2)
     lw      $4, 0($2)
-    nop
     slt     $6, $4, $3
     beq     $6, $0, .L3
-    nop
 
     sw      $4, -4($2)
     sw      $3, 0($2)
@@ -700,26 +410,47 @@ bubblesort:  # prototype: void bubblesort(int* arr, int len)
 .L3:
     addi    $2, $2, 4
     beq     $7, $2, .L7
-    nop
 
     j       .L4
-    nop
 .L7:
     beq     $8, $0, .L1
-    nop
 
     addi    $9, $9, 1
     beq     $5, $9, .L1
-    nop
 
     j       .L6
-    nop
 
 .L1:
-    j       0x00000000
-    nop");
-        for _ in 0..10000 {
-            proc.step();
+    j       0x00000000";
+
+        let segs = assemble(EndianMode::native(), code).unwrap();
+        let mut interpreter = Interpreter::new(create_memory(EndianMode::native(), &segs));
+
+        let mut expected = vec![];
+        while interpreter.as_arch().pc() != 0 {
+            expected.push(interpreter.as_arch().pc());
+            interpreter.step().unwrap();
         }
+
+        drop(interpreter);
+        let mut proc = make(code);
+
+        for expected_pc in &expected {
+            proc.step();
+
+            // skip over hazard bubbles
+            for _ in 0..5 {
+                if proc.id_ex.debug_pc.is_some() {
+                    break;
+                }
+                proc.step();
+            }
+
+            // hazard must have been skipped, or it is some kind of bug
+            let pipeline_pc= proc.id_ex.debug_pc.unwrap();
+            assert_eq!(pipeline_pc, *expected_pc, "{:08x} vs {:08x}", pipeline_pc, expected_pc);
+        }
+
+        assert_eq!(proc.arch.pc(), 0);
     }
 }

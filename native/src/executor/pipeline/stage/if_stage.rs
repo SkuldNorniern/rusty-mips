@@ -1,34 +1,12 @@
 use crate::executor::pipeline::pipes;
-use crate::executor::pipeline::units::forward_unit;
+use crate::executor::pipeline::units::hazard_unit;
 
-pub fn if_next(
-    _inst: u32,
-    _fwd: forward_unit::FwdUnit,
-    _id_ex: &mut pipes::IdPipe,
-    _ex_mem: &mut pipes::ExPipe,
-    _pc: u32,
-    _finalize: bool,
-) -> (pipes::IfPipe, u32) {
-    let mut if_id = pipes::IfPipe::default();
-    let mut pc = _pc;
-    if_id.ran = _pc;
+pub fn if_next(pc: u32, inst: u32, finalize: bool) -> pipes::IfPipe {
+    let output_inst = if !finalize { inst } else { 0 };
 
-    if _fwd.if_id_write {
-        if_id.npc = _pc + 4;
-        if_id.inst = _inst;
+    pipes::IfPipe {
+        npc: pc.wrapping_add(4),
+        inst: output_inst,
+        debug_pc: Some(pc),
     }
-
-    if _fwd.pc_write && !_finalize {
-        if _ex_mem.zero == 1 && _ex_mem.ctr_unit.branch == 1 {
-            pc = _ex_mem.branch_tgt;
-        } else if !_fwd.hazard {
-            pc = _pc + 4;
-        }
-    }
-
-    if _id_ex.ctr_unit.if_flush == 0b1 {
-        if_id.inst = 0x00000000;
-    }
-
-    (if_id, pc)
 }
