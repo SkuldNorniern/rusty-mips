@@ -46,6 +46,20 @@ impl Segment {
         self.data.extend_from_slice(&buf);
     }
 
+    pub fn append_u8(&mut self, data: u8) {
+        self.data.push(data);
+    }
+
+    pub fn append_bytes(&mut self, data: &[u8]) {
+        self.data.extend_from_slice(data);
+    }
+
+    pub fn zero_align(&mut self, alignment: usize) {
+        while self.data.len() % alignment != 0 {
+            self.data.push(0);
+        }
+    }
+
     pub fn append_label(&mut self, name: impl Into<String>) {
         self.labels.insert(name.into(), self.data.len() as u32);
     }

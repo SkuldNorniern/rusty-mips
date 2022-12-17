@@ -518,13 +518,60 @@ fn parse(
             for token in &tokens {
                 global_labels.insert(token.as_text().to_owned());
             }
-        } else if first_token == ".word" {
+        } else if let Some(keyword) = first_token.strip_prefix('.') {
             let seg = curr_seg
                 .as_mut()
                 .ok_or_else(|| SegmentRequiredSnafu { line }.build())?;
 
-            for token in &tokens {
-                seg.append_u32(token.as_number()? as u32);
+            match keyword {
+                "word" => {
+                    for token in &tokens {
+                        seg.append_u32(token.as_number()? as _);
+                    }
+                }
+                "byte" => {
+                    for token in &tokens {
+                        seg.append_u8(token.as_number()? as _);
+                    }
+                }
+                "ascii" => {
+                    line_raw.trim().strip_prefix(".ascii")
+                        .and_then(|x| x.trim().strip_prefix('"'))
+                        .and_then(|x| x.strip_suffix('"'))
+                        .map(|x| seg.append_bytes(x.as_bytes()))
+                        .ok_or_else(|| InvalidNumberOfOperandsSnafu{ line: line_raw }.build())?;
+                }
+                "asciiz" => {
+                    line_raw.trim().strip_prefix(".asciiz")
+                        .and_then(|x| x.trim().strip_prefix('"'))
+                        .and_then(|x| x.strip_suffix('"'))
+                        .map(|x| {
+                            seg.append_bytes(x.as_bytes());
+                            seg.append_u8(0);
+                        })
+                        .ok_or_else(|| InvalidNumberOfOperandsSnafu{ line: line_raw }.build())?;
+                }
+                "float" => {
+                    for token in &tokens {
+                        let data: f32 = token.as_text().parse().map_err(|_| InvalidTokenSnafu{token: token.as_text()}.build())?;
+                        let conv = unsafe {std::mem::transmute(data)};
+                        seg.append_u32(conv);
+                    }
+                }
+                "align" => {
+                    if tokens.len() != 1 {
+                        return InvalidNumberOfOperandsSnafu{ line: line_raw.trim() }.fail();
+                    }
+
+                    seg.zero_align(tokens[0].as_number()? as usize);
+                }
+                _ => {
+                    if let Some(label) = first_token.strip_suffix(':') {
+                        seg.append_label(label);
+                    } else {
+                        return InvalidTokenSnafu { token: first_token }.fail();
+                    }
+                }
             }
         } else if let Some(label) = first_token.strip_suffix(':') {
             let seg = curr_seg
@@ -607,7 +654,7 @@ pub fn assemble(endian: EndianMode, asm: &str) -> Result<Vec<Segment>, Assembler
 #[cfg(test)]
 mod test {
     use super::*;
-    use byteorder::{NativeEndian, ReadBytesExt};
+    use byteorder::{BigEndian, LittleEndian, NativeEndian, ReadBytesExt};
     use std::io::Cursor;
 
     lazy_static! {
@@ -847,5 +894,60 @@ mod test {
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x0610fff7);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x1fa0fff6);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x1ba0fff5);
+    }
+
+    #[test]
+    fn extra_data_directives() {
+        let code = r#"
+        .data 0x10008024
+        .word 1 2 3
+        .word -1 -2 -3
+        .ascii "asdf"
+        .asciiz "abc"
+        .byte 1 2 3 4 5
+        .byte -1 -2
+        .align 4
+        .float 1.2"#;
+
+        // little endian test
+        let segs = assemble(EndianMode::Little, code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x10008024);
+        assert_eq!(segs[0].data.len(), 44);
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 1);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 2);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 3);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), -1_i32 as u32);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), -2_i32 as u32);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), -3_i32 as u32);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 0x66647361);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 0x00636261);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 0x04030201);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 0x00FEFF05);
+        assert_eq!(data.read_u32::<LittleEndian>().unwrap(), 0x3F99999A);
+
+        drop(data);
+        drop(segs);
+
+        // big endian test
+        let segs = assemble(EndianMode::Big, code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x10008024);
+        assert_eq!(segs[0].data.len(), 44);
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 1);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 2);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 3);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), -1_i32 as u32);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), -2_i32 as u32);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), -3_i32 as u32);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 0x61736466);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 0x61626300);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 0x01020304);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 0x05FFFE00);
+        assert_eq!(data.read_u32::<BigEndian>().unwrap(), 0x3F99999A);
     }
 }
