@@ -110,20 +110,16 @@ main:
     addi    $a1, $0, 5
 
     j       bubblesort
-    nop
 
 bubblesort:  # prototype: void bubblesort(int* arr, int len)
     addi    $15, $0, 1
     slt     $15, $5, $15
     beq     $15, $0, .L8
-    nop
 
     j       .L1
-    nop
 .L8:
     addi    $2, $0, 1
     beq     $5, $2, .L1
-    nop
 
     sll     $7, $5, 2
     add     $7, $4, $7
@@ -138,7 +134,6 @@ bubblesort:  # prototype: void bubblesort(int* arr, int len)
     nop
     slt     $6, $4, $3
     beq     $6, $0, .L3
-    nop
 
     sw      $4, -4($2)
     sw      $3, 0($2)
@@ -146,23 +141,17 @@ bubblesort:  # prototype: void bubblesort(int* arr, int len)
 .L3:
     addi    $2, $2, 4
     beq     $7, $2, .L7
-    nop
 
     j       .L4
-    nop
 .L7:
     beq     $8, $0, .L1
-    nop
 
     addi    $9, $9, 1
     beq     $5, $9, .L1
-    nop
 
     j       .L6
-    nop
 
 .L1:
-    j       0x00000000
-    nop`
+    j       0x00000000`
   }
 ];
