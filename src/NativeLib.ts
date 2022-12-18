@@ -42,8 +42,9 @@ export interface IPipelineDetail {
 
 interface IPipelineNodeInfo {
   type: 'hex32' | 'dec' | 'bool'
+  id: string
   name: string
-  value: unknown
+  value: any
 }
 
 export type IModuleState = Readonly<IModuleStateRaw>;

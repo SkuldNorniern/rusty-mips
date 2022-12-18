@@ -81,7 +81,7 @@ const PipelinePage = (): JSX.Element | null => {
   const handleOnClick = (idx: number): void => {
     if (state.pipelineDetail != null) {
       const info = state.pipelineDetail.nodes[idx];
-      const content = (info.value as any as number).toString();
+      const content = info.value.toString();
       setState(prev => ({ ...prev, showInfo: true, infoTitle: info.name, infoContent: content }));
     }
   };
@@ -98,7 +98,7 @@ const PipelinePage = (): JSX.Element | null => {
   React.useEffect(() => {
     if (imageRef.current != null && state.pipelineDetail != null) {
       for (let i = 0; i < state.pipelineDetail.nodes.length; i++) {
-        const elem = document.getElementById(state.pipelineDetail.nodes[i].name);
+        const elem = document.getElementById(state.pipelineDetail.nodes[i].id);
         if (elem != null) {
           setStyle(elem);
           elem.onclick = handleOnClick.bind(null, i);

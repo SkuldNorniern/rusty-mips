@@ -15,9 +15,21 @@ pub struct PipelineDetail {
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "type")]
 pub enum PipelineNodeInfo {
-    Hex32 { name: String, value: u32 },
-    Dec { name: String, value: i64 },
-    Bool { name: String, value: bool },
+    Hex32 {
+        id: &'static str,
+        name: &'static str,
+        value: u32,
+    },
+    Dec {
+        id: &'static str,
+        name: &'static str,
+        value: i64,
+    },
+    Bool {
+        id: &'static str,
+        name: &'static str,
+        value: bool,
+    },
 }
 
 #[cfg(test)]
@@ -63,18 +75,22 @@ mod test {
             debug_ins_wb: Some("e".into()),
             nodes: vec![
                 Hex32 {
+                    id: "id_x",
                     name: "x".into(),
                     value: 0x123456,
                 },
                 Dec {
+                    id: "id_y",
                     name: "y".into(),
                     value: 1234,
                 },
                 Dec {
+                    id: "id_z",
                     name: "z".into(),
                     value: -12,
                 },
                 Bool {
+                    id: "id_w",
                     name: "w".into(),
                     value: false,
                 },
@@ -92,10 +108,10 @@ mod test {
                 "debugInsMem": "d",
                 "debugInsWb": "e",
                 "nodes": [
-                    { "type": "hex32", "name": "x", "value": 1193046 },
-                    { "type": "dec", "name": "y", "value": 1234 },
-                    { "type": "dec", "name": "z", "value": -12 },
-                    { "type": "bool", "name": "w", "value": false },
+                    { "type": "hex32", "id": "id_x", "name": "x", "value": 1193046 },
+                    { "type": "dec", "id": "id_y", "name": "y", "value": 1234 },
+                    { "type": "dec", "id": "id_z", "name": "z", "value": -12 },
+                    { "type": "bool", "id": "id_w", "name": "w", "value": false },
                 ]
             }),
             "{}",

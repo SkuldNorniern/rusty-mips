@@ -1775,7 +1775,7 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
-      <g transform="matrix(1,0,0,1,897.092,488.465)">
+      <g id="id_ex_data_a" transform="matrix(1,0,0,1,897.092,488.465)">
         <rect
           x={1336.61}
           y={1136.01}
@@ -2556,7 +2556,7 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
-      <g transform="matrix(1,0,0,1,1989.26,988.547)">
+      <g id="ex_mem_b" transform="matrix(1,0,0,1,1989.26,988.547)">
         <rect
           x={1336.61}
           y={1136.01}
@@ -3050,16 +3050,6 @@ const SvgUntitled = (props, ref) => (
           >
             {'MemtoReg'}
           </text>
-        </g>
-        <g transform="matrix(0.730969,0,0,1.22033,-1857.34,655.326)">
-          <path
-            d="M4382.4,419.532L4488.09,419.532L4382.4,419.532Z"
-            style={{
-              fill: 'rgb(0,18,135)',
-              stroke: 'black',
-              strokeWidth: '1.67px'
-            }}
-          />
         </g>
         <rect
           x={1336.61}
