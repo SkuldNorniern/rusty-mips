@@ -13,13 +13,7 @@ pub fn alu_unit(a: u32, b: u32, shamt: u32, op: AluOp) -> u32 {
         AluOp::And => a & b,
         AluOp::Or => a | b,
         AluOp::Sub => a.wrapping_sub(b),
-        AluOp::Slt => {
-            if a < b {
-                1
-            } else {
-                0
-            }
-        }
+        AluOp::Slt => (a < b) as _,
         AluOp::Sll => b << shamt,
     }
 }

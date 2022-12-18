@@ -563,7 +563,7 @@ fn parse(
                             }
                             .build()
                         })?;
-                        let conv = unsafe { std::mem::transmute(data) };
+                        let conv = data.to_bits();
                         seg.append_u32(conv);
                     }
                 }

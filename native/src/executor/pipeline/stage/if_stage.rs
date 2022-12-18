@@ -1,5 +1,4 @@
 use crate::executor::pipeline::pipes;
-use crate::executor::pipeline::units::hazard_unit;
 
 pub fn if_next(pc: u32, inst: u32, finalize: bool) -> pipes::IfPipe {
     let output_inst = if !finalize { inst } else { 0 };

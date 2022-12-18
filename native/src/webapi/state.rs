@@ -1,13 +1,12 @@
 use crate::assembler::assemble;
 use crate::component::RegisterName;
 use crate::disassembler::disassemble;
-use crate::executor::{Description, Executor, Interpreter, Jit, Pipeline, HAS_JIT};
+use crate::executor::{Executor, Interpreter, Jit, Pipeline, HAS_JIT};
 use crate::memory::{create_empty_memory, create_memory, EndianMode};
 use crate::webapi::updates::Updates;
 use neon::prelude::*;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
-use std::collections::HashMap;
 use std::mem::swap;
 use std::ops::RangeInclusive;
 use std::sync::Arc;

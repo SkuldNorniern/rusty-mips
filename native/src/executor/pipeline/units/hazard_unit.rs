@@ -28,32 +28,33 @@ pub fn hazard_ctrl(
         } else {
             id_output.rt
         };
-        if id_output.ctr_unit.reg_write && id_reg_write != 0 {
-            if (reads_rs_rt && (rs == id_reg_write || rt == id_reg_write))
-                || (reads_rs && rs == id_reg_write)
-            {
-                // calc-branch OR load-branch
-                ret.redo_if = true;
-            }
+        if id_output.ctr_unit.reg_write
+            && id_reg_write != 0
+            && ((reads_rs_rt && (rs == id_reg_write || rt == id_reg_write))
+                || (reads_rs && rs == id_reg_write))
+        {
+            // calc-branch OR load-branch
+            ret.redo_if = true;
         }
-        if ex_output.ctr_unit.mem_read && ex_output.rd != 0 {
-            if (reads_rs_rt && (rs == ex_output.rd || rt == ex_output.rd))
-                || (reads_rs && rs == ex_output.rd)
-            {
-                // load-branch
-                ret.redo_if = true;
-            }
+        if ex_output.ctr_unit.mem_read
+            && ex_output.rd != 0
+            && ((reads_rs_rt && (rs == ex_output.rd || rt == ex_output.rd))
+                || (reads_rs && rs == ex_output.rd))
+        {
+            // load-branch
+            ret.redo_if = true;
         }
     }
 
     // opcode not sw
-    if opcode != 0x2b && id_output.ctr_unit.mem_read && id_output.rt != 0 {
-        if (reads_rs_rt && (rs == id_output.rt || rt == id_output.rt))
-            || (reads_rs && rs == id_output.rt)
-        {
-            // load-use
-            ret.redo_if = true;
-        }
+    if opcode != 0x2b
+        && id_output.ctr_unit.mem_read
+        && id_output.rt != 0
+        && ((reads_rs_rt && (rs == id_output.rt || rt == id_output.rt))
+            || (reads_rs && rs == id_output.rt))
+    {
+        // load-use
+        ret.redo_if = true;
     }
 
     if id_output.branch_taken || id_output.ctr_unit.jump {

@@ -1,7 +1,5 @@
 use super::pipes;
-use super::stage;
-use super::units;
-use crate::component::{Instruction, RegisterName};
+use crate::component::RegisterName;
 use crate::executor::Arch;
 use crate::memory::Memory;
 
@@ -13,7 +11,6 @@ use crate::executor::pipeline::stage::mem_stage::mem_next;
 use crate::executor::pipeline::stage::wb_stage::wb_next;
 use crate::executor::pipeline::units::hazard_unit::hazard_ctrl;
 use crate::executor::pipeline::{debug, info};
-use std::collections::HashMap;
 
 pub struct Description {
     pub id: String,
@@ -157,6 +154,7 @@ mod test {
     use super::*;
     use crate::assembler::assemble;
     use crate::disassembler::disassemble;
+    use crate::executor::pipeline::units;
     use crate::executor::Interpreter;
     use crate::memory::{create_memory, EndianMode};
 

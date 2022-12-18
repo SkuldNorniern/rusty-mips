@@ -1,7 +1,6 @@
 use crate::executor::pipeline::pipes;
 use crate::executor::pipeline::units::{control_unit, forward_unit};
 use crate::executor::Arch;
-use std::process::id;
 
 pub fn id_next(
     id_input: &pipes::IfPipe,
