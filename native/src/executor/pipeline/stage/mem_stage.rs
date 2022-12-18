@@ -1,7 +1,11 @@
 use crate::executor::pipeline::pipes;
 use crate::executor::Arch;
 
-pub fn mem_next(mem_input: &pipes::ExPipe, arch: &mut Arch) -> pipes::MemPipe {
+pub fn mem_next(
+    mem_input: &pipes::ExPipe,
+    wb_input: &pipes::MemPipe,
+    arch: &mut Arch,
+) -> pipes::MemPipe {
     let lmd = if mem_input.ctr_unit.mem_read {
         arch.mem.read_u32(mem_input.alu_out)
     } else {
@@ -9,7 +13,12 @@ pub fn mem_next(mem_input: &pipes::ExPipe, arch: &mut Arch) -> pipes::MemPipe {
     };
 
     if mem_input.ctr_unit.mem_write {
-        arch.mem.write_u32(mem_input.alu_out, mem_input.data_b);
+        let data = if wb_input.ctr_unit.mem_read && wb_input.rd == mem_input.rd {
+            wb_input.lmd
+        } else {
+            mem_input.data_b
+        };
+        arch.mem.write_u32(mem_input.alu_out, data);
     }
 
     pipes::MemPipe {

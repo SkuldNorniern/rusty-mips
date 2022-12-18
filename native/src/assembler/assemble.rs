@@ -535,32 +535,44 @@ fn parse(
                     }
                 }
                 "ascii" => {
-                    line_raw.trim().strip_prefix(".ascii")
+                    line_raw
+                        .trim()
+                        .strip_prefix(".ascii")
                         .and_then(|x| x.trim().strip_prefix('"'))
                         .and_then(|x| x.strip_suffix('"'))
                         .map(|x| seg.append_bytes(x.as_bytes()))
-                        .ok_or_else(|| InvalidNumberOfOperandsSnafu{ line: line_raw }.build())?;
+                        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line: line_raw }.build())?;
                 }
                 "asciiz" => {
-                    line_raw.trim().strip_prefix(".asciiz")
+                    line_raw
+                        .trim()
+                        .strip_prefix(".asciiz")
                         .and_then(|x| x.trim().strip_prefix('"'))
                         .and_then(|x| x.strip_suffix('"'))
                         .map(|x| {
                             seg.append_bytes(x.as_bytes());
                             seg.append_u8(0);
                         })
-                        .ok_or_else(|| InvalidNumberOfOperandsSnafu{ line: line_raw }.build())?;
+                        .ok_or_else(|| InvalidNumberOfOperandsSnafu { line: line_raw }.build())?;
                 }
                 "float" => {
                     for token in &tokens {
-                        let data: f32 = token.as_text().parse().map_err(|_| InvalidTokenSnafu{token: token.as_text()}.build())?;
-                        let conv = unsafe {std::mem::transmute(data)};
+                        let data: f32 = token.as_text().parse().map_err(|_| {
+                            InvalidTokenSnafu {
+                                token: token.as_text(),
+                            }
+                            .build()
+                        })?;
+                        let conv = unsafe { std::mem::transmute(data) };
                         seg.append_u32(conv);
                     }
                 }
                 "align" => {
                     if tokens.len() != 1 {
-                        return InvalidNumberOfOperandsSnafu{ line: line_raw.trim() }.fail();
+                        return InvalidNumberOfOperandsSnafu {
+                            line: line_raw.trim(),
+                        }
+                        .fail();
                     }
 
                     seg.zero_align(tokens[0].as_number()? as usize);

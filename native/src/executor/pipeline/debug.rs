@@ -1,6 +1,6 @@
 use crate::disassembler::disassemble;
-use crate::executor::Arch;
 use crate::executor::pipeline::{info, pipes};
+use crate::executor::Arch;
 
 pub fn generate_info(
     arch: &Arch,

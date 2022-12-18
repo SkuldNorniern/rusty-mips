@@ -10,7 +10,6 @@ pub fn hazard_ctrl(
     if_output: &pipes::IfPipe,
     id_output: &pipes::IdPipe,
     ex_output: &pipes::ExPipe,
-    mem_output: &pipes::MemPipe,
 ) -> HazardUnit {
     let mut ret: HazardUnit = Default::default();
 
@@ -22,8 +21,8 @@ pub fn hazard_ctrl(
     let reads_rs_rt = opcode == 0 || opcode == 4 || opcode == 0x2b;
     let reads_rs = opcode == 0x23;
 
+    // opcode is beq
     if opcode == 4 {
-        // beq
         let id_reg_write = if id_output.ctr_unit.reg_dst {
             id_output.rd
         } else {
@@ -47,7 +46,8 @@ pub fn hazard_ctrl(
         }
     }
 
-    if id_output.ctr_unit.mem_read && id_output.rt != 0 {
+    // opcode not sw
+    if opcode != 0x2b && id_output.ctr_unit.mem_read && id_output.rt != 0 {
         if (reads_rs_rt && (rs == id_output.rt || rt == id_output.rt))
             || (reads_rs && rs == id_output.rt)
         {

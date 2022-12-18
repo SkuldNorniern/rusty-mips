@@ -12,8 +12,8 @@ use crate::executor::pipeline::stage::if_stage::if_next;
 use crate::executor::pipeline::stage::mem_stage::mem_next;
 use crate::executor::pipeline::stage::wb_stage::wb_next;
 use crate::executor::pipeline::units::hazard_unit::hazard_ctrl;
-use std::collections::HashMap;
 use crate::executor::pipeline::{debug, info};
+use std::collections::HashMap;
 
 pub struct Description {
     pub id: String,
@@ -85,10 +85,10 @@ impl Pipeline {
         let if_output = if_next(fetch_pc, fetch_ins, finalize);
         let id_output = id_next(&self.if_id, &self.arch, &self.ex_mem, &self.mem_wb);
         let ex_output = ex_next(&self.id_ex, &self.arch, &self.ex_mem, &self.mem_wb);
-        let mem_output = mem_next(&self.ex_mem, &mut self.arch);
+        let mem_output = mem_next(&self.ex_mem, &self.mem_wb, &mut self.arch);
         let wb_output = wb_next(&self.mem_wb, &mut self.arch);
 
-        let hazard = hazard_ctrl(&if_output, &id_output, &ex_output, &mem_output);
+        let hazard = hazard_ctrl(&if_output, &id_output, &ex_output);
 
         let next_pc = if id_output.branch_taken {
             id_output.branch_target
@@ -99,31 +99,18 @@ impl Pipeline {
         };
 
         if LOG_OUTPUT {
-            let read_disassemble = |debug_pc: Option<u32>| {
-                disassemble(self.arch.mem.read_u32(debug_pc.unwrap_or(0)))
-            };
+            let read_disassemble =
+                |debug_pc: Option<u32>| disassemble(self.arch.mem.read_u32(debug_pc.unwrap_or(0)));
 
             println!("IF ins: {}", disassemble(if_output.inst));
             println!("IF: {:?}", if_output);
-            println!(
-                "ID ins: {}",
-                read_disassemble(id_output.debug_pc)
-            );
+            println!("ID ins: {}", read_disassemble(id_output.debug_pc));
             println!("ID: {:?}", id_output);
-            println!(
-                "EX ins: {}",
-                read_disassemble(ex_output.debug_pc)
-            );
+            println!("EX ins: {}", read_disassemble(ex_output.debug_pc));
             println!("EX: {:?}", ex_output);
-            println!(
-                "MEM ins: {}",
-                read_disassemble(mem_output.debug_pc)
-            );
+            println!("MEM ins: {}", read_disassemble(mem_output.debug_pc));
             println!("MEM: {:?}", mem_output);
-            println!(
-                "WB ins: {}",
-                read_disassemble(wb_output.debug_pc)
-            );
+            println!("WB ins: {}", read_disassemble(wb_output.debug_pc));
             println!("WB: {:?}", wb_output);
             println!("Hazard: {:?}", hazard);
             println!("Next PC: {:08x}", next_pc);
@@ -155,7 +142,13 @@ impl Pipeline {
     }
 
     pub fn get_pipeline_detail(&self) -> info::PipelineDetail {
-        debug::generate_info(&self.arch, &self.if_id, &self.id_ex, &self.ex_mem, &self.mem_wb)
+        debug::generate_info(
+            &self.arch,
+            &self.if_id,
+            &self.id_ex,
+            &self.ex_mem,
+            &self.mem_wb,
+        )
     }
 }
 
@@ -277,6 +270,15 @@ mod test {
         proc.step();
         assert_eq!(proc.reg(19), 0x1);
         //panic!()
+    }
+
+    #[test]
+    fn inst_lw_sw() {
+        let mut proc = make(".text\nlw $16, 0($gp)\nsw $16, 0($gp)");
+        proc.step();
+        assert!(proc.if_id.debug_pc.is_some());
+        proc.step();
+        assert!(proc.if_id.debug_pc.is_some());
     }
 
     #[test]
@@ -447,8 +449,12 @@ bubblesort:  # prototype: void bubblesort(int* arr, int len)
             }
 
             // hazard must have been skipped, or it is some kind of bug
-            let pipeline_pc= proc.id_ex.debug_pc.unwrap();
-            assert_eq!(pipeline_pc, *expected_pc, "{:08x} vs {:08x}", pipeline_pc, expected_pc);
+            let pipeline_pc = proc.id_ex.debug_pc.unwrap();
+            assert_eq!(
+                pipeline_pc, *expected_pc,
+                "{:08x} vs {:08x}",
+                pipeline_pc, expected_pc
+            );
         }
 
         assert_eq!(proc.arch.pc(), 0);

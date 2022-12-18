@@ -8,22 +8,22 @@ pub struct PipelineDetail {
     pub debug_ins_ex: Option<String>,
     pub debug_ins_mem: Option<String>,
     pub debug_ins_wb: Option<String>,
-    pub nodes: Vec<PipelineNodeInfo>
+    pub nodes: Vec<PipelineNodeInfo>,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "type")]
 pub enum PipelineNodeInfo {
-    Hex32{ name: String, value: u32},
-    Dec{name: String, value: i64},
-    Bool{name: String, value: bool},
+    Hex32 { name: String, value: u32 },
+    Dec { name: String, value: i64 },
+    Bool { name: String, value: bool },
 }
 
 #[cfg(test)]
 mod test {
-    use serde_json::json;
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn empty() {
@@ -38,14 +38,17 @@ mod test {
 
         let serialized = serde_json::to_value(pipeline).unwrap();
 
-        assert_eq!(serialized, json!({
-            "debugInsIf": "a",
-            "debugInsId": "b",
-            "debugInsEx": null,
-            "debugInsMem": null,
-            "debugInsWb": "e",
-            "nodes": []
-        }));
+        assert_eq!(
+            serialized,
+            json!({
+                "debugInsIf": "a",
+                "debugInsId": "b",
+                "debugInsEx": null,
+                "debugInsMem": null,
+                "debugInsWb": "e",
+                "nodes": []
+            })
+        );
     }
 
     #[test]
@@ -59,27 +62,44 @@ mod test {
             debug_ins_mem: Some("d".into()),
             debug_ins_wb: Some("e".into()),
             nodes: vec![
-                Hex32{name: "x".into(), value:0x123456},
-                Dec{name: "y".into(), value:1234},
-                Dec{name: "z".into(), value: -12},
-                Bool{name: "w".into(), value: false},
+                Hex32 {
+                    name: "x".into(),
+                    value: 0x123456,
+                },
+                Dec {
+                    name: "y".into(),
+                    value: 1234,
+                },
+                Dec {
+                    name: "z".into(),
+                    value: -12,
+                },
+                Bool {
+                    name: "w".into(),
+                    value: false,
+                },
             ],
         };
 
         let serialized = serde_json::to_value(&pipeline).unwrap();
 
-        assert_eq!(serialized, json!({
-            "debugInsIf": "a",
-            "debugInsId": "b",
-            "debugInsEx": "c",
-            "debugInsMem": "d",
-            "debugInsWb": "e",
-            "nodes": [
-                { "type": "hex32", "name": "x", "value": 1193046 },
-                { "type": "dec", "name": "y", "value": 1234 },
-                { "type": "dec", "name": "z", "value": -12 },
-                { "type": "bool", "name": "w", "value": false },
-            ]
-        }), "{}", serde_json::to_string_pretty(&pipeline).unwrap());
+        assert_eq!(
+            serialized,
+            json!({
+                "debugInsIf": "a",
+                "debugInsId": "b",
+                "debugInsEx": "c",
+                "debugInsMem": "d",
+                "debugInsWb": "e",
+                "nodes": [
+                    { "type": "hex32", "name": "x", "value": 1193046 },
+                    { "type": "dec", "name": "y", "value": 1234 },
+                    { "type": "dec", "name": "z", "value": -12 },
+                    { "type": "bool", "name": "w", "value": false },
+                ]
+            }),
+            "{}",
+            serde_json::to_string_pretty(&pipeline).unwrap()
+        );
     }
 }
