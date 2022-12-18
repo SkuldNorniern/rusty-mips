@@ -4157,6 +4157,8 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
+      <text x="5320px" y="1590px" style={{ fontFamily: 'ArialMT, Arial, sans-serif', fontSize: '29.167px' }}>0</text>
+      <text x="5320px" y="1480px" style={{ fontFamily: 'ArialMT, Arial, sans-serif', fontSize: '29.167px' }}>1</text>
       <g transform="matrix(3.88712e-17,-0.634815,5.00868,3.06693e-16,-3255.96,1920.93)">
         <path
           d="M411.996,1718.79L562.073,1718.79L411.996,1718.79Z"
