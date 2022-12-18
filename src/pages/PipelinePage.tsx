@@ -5,6 +5,7 @@ import Registers from '../views/Registers';
 import Modal from 'react-bootstrap/Modal';
 import { NativeLibContext } from '../context/NativeLibContext';
 import Button from 'react-bootstrap/Button';
+import { IPipelineDetail } from '../NativeLib';
 
 const Root = styled.div`
   padding: 1rem;
@@ -59,7 +60,9 @@ interface IState {
   cycle: number
   showInfo: boolean
   infoTitle: string
-  infoValue: string
+  infoContent: string
+  pipelineDetailRaw: string
+  pipelineDetail: IPipelineDetail | null
 }
 
 const PipelinePage = (): JSX.Element | null => {
@@ -70,54 +73,51 @@ const PipelinePage = (): JSX.Element | null => {
     cycle: 0,
     showInfo: false,
     infoTitle: '',
-    infoValue: ''
+    infoContent: '',
+    pipelineDetailRaw: '',
+    pipelineDetail: null
   });
 
-  const handleOnClick = (id: string): void => {
-    const info = native.state.pipelineDetail[id];
-    setState(prev => ({ ...prev, showInfo: true, infoTitle: info.name, infoValue: info.value }));
+  const handleOnClick = (idx: number): void => {
+    if (state.pipelineDetail != null) {
+      const info = state.pipelineDetail.nodes[idx];
+      const content = (info.value as any as number).toString();
+      setState(prev => ({ ...prev, showInfo: true, infoTitle: info.name, infoContent: content }));
+    }
   };
 
   React.useEffect(() => {
-    if (imageRef.current != null && Object.prototype.hasOwnProperty.call(native.state, 'pipelineDetail')) {
-      for (const k of native.state.pipelineDetailList) {
-        const elem = document.getElementById(k);
-        if (elem == null) {
-          continue;
-        }
+    if (native.state == null) {
+      setState(prev => ({ ...prev, pipelineDetailRaw: '', pipelineDetail: null }));
+    } else if (native.state.pipelineDetail !== state.pipelineDetailRaw) {
+      const detail = JSON.parse(native.state.pipelineDetail);
+      setState(prev => ({ ...prev, pipelineDetailRaw: native.state.pipelineDetail, pipelineDetail: detail }));
+    }
+  }, [native.state]);
 
-        setStyle(elem);
-        elem.onclick = handleOnClick.bind(null, k);
+  React.useEffect(() => {
+    if (imageRef.current != null && state.pipelineDetail != null) {
+      for (let i = 0; i < state.pipelineDetail.nodes.length; i++) {
+        const elem = document.getElementById(state.pipelineDetail.nodes[i].name);
+        if (elem != null) {
+          setStyle(elem);
+          elem.onclick = handleOnClick.bind(null, i);
+        }
       }
-      for (const stage of ['if', 'id', 'ex', 'mem', 'wb']) {
-        const key = `debug-${stage}-pc`;
-        const elem = document.getElementById(`svg-item-debug-${stage}-ins`);
+
+      for (const stage of ['If', 'Id', 'Ex', 'Mem', 'Wb']) {
+        const key = `debugIns${stage}`;
+        const elem = document.getElementById(`svg-item-debug-${stage.toLowerCase()}-ins`);
         if (elem == null) {
           continue;
         }
 
-        const detail = native.state.pipelineDetail[key];
-        if (detail == null) {
-          continue;
-        }
-
-        const ins = ((): string | null => {
-          const addr = Number.parseInt(detail.value, 16);
-          if (addr == null) {
-            return null;
-          }
-
-          const info = native.state.disasm[addr.toString()];
-          if (info == null) {
-            return null;
-          } else {
-            return info[1];
-          }
-        })();
-        elem.textContent = ins ?? '(unknown)';
+        // @ts-expect-error
+        const ins: string | null = state.pipelineDetail[key];
+        elem.textContent = ins ?? '(bubble)';
       }
     }
-  }, [imageRef.current, native.state]);
+  }, [imageRef.current, state.pipelineDetail]);
 
   const containerRef = React.useCallback((node: HTMLDivElement) => {
     // @ts-expect-error
@@ -188,7 +188,7 @@ const PipelinePage = (): JSX.Element | null => {
           <Modal.Title>{state.infoTitle}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {state.infoValue}
+          {state.infoContent}
         </Modal.Body>
       </Modal>
       <Root>

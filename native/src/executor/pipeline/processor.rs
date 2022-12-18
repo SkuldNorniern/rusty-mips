@@ -13,6 +13,7 @@ use crate::executor::pipeline::stage::mem_stage::mem_next;
 use crate::executor::pipeline::stage::wb_stage::wb_next;
 use crate::executor::pipeline::units::hazard_unit::hazard_ctrl;
 use std::collections::HashMap;
+use crate::executor::pipeline::{debug, info};
 
 pub struct Description {
     pub id: String,
@@ -153,9 +154,8 @@ impl Pipeline {
         self.next(true);
     }
 
-    pub(crate) fn get_pipeline_detail(&self) -> HashMap<String, Description> {
-        let mut map = HashMap::new();
-        map
+    pub fn get_pipeline_detail(&self) -> info::PipelineDetail {
+        debug::generate_info(&self.arch, &self.if_id, &self.id_ex, &self.ex_mem, &self.mem_wb)
     }
 }
 

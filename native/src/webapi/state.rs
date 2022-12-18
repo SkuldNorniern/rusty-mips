@@ -148,9 +148,9 @@ impl State {
         };
 
         let pipeline_detail = if updates.contains(Updates::REGISTERS) {
-            self.inner.capture_pipeline_detail()
+            Some(self.inner.capture_pipeline_detail())
         } else {
-            HashMap::new()
+            None
         };
 
         let disasm_mapping = if updates.contains(Updates::DISASSEMBLY) {
@@ -169,26 +169,9 @@ impl State {
                 obj.set(&mut cx, "regs", regs)?;
                 obj.set(&mut cx, "pc", pc)?;
 
-                if !pipeline_detail.is_empty() {
-                    let details = cx.empty_object();
-                    let entry_list = cx.empty_array();
-                    for (k, v) in &pipeline_detail {
-                        let k = cx.string(k);
-                        let info = cx.empty_object();
-                        let name = cx.string(&v.name);
-                        let value = cx.string(&v.value);
-                        info.set(&mut cx, "name", name)?;
-                        info.set(&mut cx, "value", value)?;
-                        details.set(&mut cx, k, info)?;
-                    }
-
-                    for (i, k) in pipeline_detail.keys().enumerate() {
-                        let value = cx.string(k);
-                        entry_list.set(&mut cx, i as u32, value)?;
-                    }
-
-                    obj.set(&mut cx, "pipelineDetail", details)?;
-                    obj.set(&mut cx, "pipelineDetailList", entry_list)?;
+                if let Some(x) = pipeline_detail {
+                    let str = cx.string(x);
+                    obj.set(&mut cx, "pipelineDetail", str)?;
                 }
             }
 
@@ -309,12 +292,14 @@ impl Inner {
         mapping
     }
 
-    fn capture_pipeline_detail(&self) -> HashMap<String, Description> {
-        if let Executor::ExPipeline(x) = &self.exec {
+    fn capture_pipeline_detail(&self) -> String {
+        let detail = if let Executor::ExPipeline(x) = &self.exec {
             x.get_pipeline_detail()
         } else {
-            HashMap::new()
-        }
+            Default::default()
+        };
+
+        serde_json::to_string(&detail).unwrap_or_else(|_| "".into())
     }
 
     fn capture_running(&self) -> bool {
