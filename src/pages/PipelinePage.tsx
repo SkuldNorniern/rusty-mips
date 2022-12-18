@@ -65,7 +65,7 @@ interface IState {
 const PipelinePage = (): JSX.Element | null => {
   const native = React.useContext(NativeLibContext);
   const imageRef = React.useRef<SVGElement>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const containerRefInner = React.useRef<HTMLDivElement>(null);
   const [state, setState] = React.useState<Readonly<IState>>({
     cycle: 0,
     showInfo: false,
@@ -119,13 +119,16 @@ const PipelinePage = (): JSX.Element | null => {
     }
   }, [imageRef.current, native.state]);
 
-  React.useEffect(() => {
-    if (containerRef.current == null) {
+  const containerRef = React.useCallback((node: HTMLDivElement) => {
+    // @ts-expect-error
+    containerRefInner.current = node;
+
+    if (node == null) {
       return;
     }
 
     const calcWidth = (w: number, h: number): string | null => {
-      const newWidth = h / 2880 * 5400;
+      const newWidth = h / 3080 * 6000;
       if (Math.abs(w - newWidth) < 2) {
         return null;
       } else {
@@ -157,12 +160,8 @@ const PipelinePage = (): JSX.Element | null => {
       }
     });
 
-    observer.observe(containerRef.current);
-
-    return function cleanup () {
-      observer.disconnect();
-    };
-  }, [containerRef.current]);
+    observer.observe(node);
+  }, []);
 
   if (!native.initialized) {
     return null;
@@ -200,7 +199,7 @@ const PipelinePage = (): JSX.Element | null => {
               파이프라인을 보기 위해서는 파이프라인 모델로 전환해야 합니다.
               전환하면
               and/&#8203;or/&#8203;add/&#8203;sub/&#8203;slt/&#8203;lw/&#8203;sw/&#8203;beq/&#8203;j
-              명령어만 사용할 수 있습니다.
+              명령만 실행할 수 있습니다.
             </LongText>
           </>}
           {native.state.canUsePipeline && <>
