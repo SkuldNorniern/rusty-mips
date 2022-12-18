@@ -18,6 +18,15 @@ impl TypeR {
             | (funct as u32)
     }
 
+    pub fn decode(ins: u32) -> Option<(u8, TypeR)> {
+        let opcode = (ins >> 26) & 0x3f;
+        if opcode == 0 {
+            Some(Self::decode_unchecked(ins))
+        } else {
+            None
+        }
+    }
+
     fn decode_unchecked(ins: u32) -> (u8, TypeR) {
         let rs = ((ins >> 21) & 0x1f) as u8;
         let rt = ((ins >> 16) & 0x1f) as u8;
@@ -34,6 +43,31 @@ impl TypeR {
                 shamt,
             },
         )
+    }
+
+    fn rs_zeroed(self) -> Self {
+        TypeR {
+            rs: Default::default(),
+            ..self
+        }
+    }
+
+    fn rt_zeroed(self) -> Self {
+        TypeR {
+            rt: Default::default(),
+            ..self
+        }
+    }
+
+    fn rd_zeroed(self) -> Self {
+        TypeR {
+            rd: Default::default(),
+            ..self
+        }
+    }
+
+    fn shamt_zeroed(self) -> Self {
+        TypeR { shamt: 0, ..self }
     }
 }
 
@@ -52,6 +86,15 @@ impl TypeI {
             | (self.imm as u32)
     }
 
+    pub fn decode(ins: u32) -> Option<(u8, TypeI)> {
+        let opcode = (ins >> 26) & 0x3f;
+        if opcode != 0 && opcode != 2 && opcode != 3 {
+            Some(Self::decode_unchecked(ins))
+        } else {
+            None
+        }
+    }
+
     fn decode_unchecked(ins: u32) -> (u8, TypeI) {
         let opcode = ((ins >> 26) & 0x3f) as u8;
         let rs = ((ins >> 21) & 0x1f) as u8;
@@ -67,6 +110,13 @@ impl TypeI {
             },
         )
     }
+
+    fn rs_zeroed(self) -> Self {
+        TypeI {
+            rs: Default::default(),
+            ..self
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
@@ -77,6 +127,15 @@ pub struct TypeJ {
 impl TypeJ {
     pub fn encode(&self, opcode: u8) -> u32 {
         (opcode as u32) << 26 | self.target
+    }
+
+    pub fn decode(ins: u32) -> Option<(u8, TypeJ)> {
+        let opcode = (ins >> 26) & 0x3f;
+        if opcode == 2 && opcode == 3 {
+            Some(Self::decode_unchecked(ins))
+        } else {
+            None
+        }
     }
 
     fn decode_unchecked(ins: u32) -> (u8, TypeJ) {
@@ -151,9 +210,9 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub fn as_invalid(&self) -> Option<u32> {
+    pub fn as_invalid(self) -> Option<u32> {
         if let Instruction::invalid(x) = self {
-            Some(*x)
+            Some(x)
         } else {
             None
         }
@@ -167,98 +226,98 @@ enum TypeGroup {
 }
 
 impl Instruction {
-    pub fn encode(&self) -> u32 {
+    pub fn encode(self) -> u32 {
         use Instruction::*;
         use TypeGroup::*;
 
         // this variable `opcode` means `funct` on R-type instructions
         let (opcode, ty) = match self {
-            add(x) => (0x20, R(*x)),
-            addu(x) => (0x21, R(*x)),
-            and(x) => (0x24, R(*x)),
-            nor(x) => (0x27, R(*x)),
-            or(x) => (0x25, R(*x)),
-            slt(x) => (0x2a, R(*x)),
-            sltu(x) => (0x2b, R(*x)),
-            sub(x) => (0x22, R(*x)),
-            subu(x) => (0x23, R(*x)),
-            xor(x) => (0x26, R(*x)),
-            sll(x) => (0x00, R(*x)),
-            sllv(x) => (0x04, R(*x)),
-            sra(x) => (0x03, R(*x)),
-            srav(x) => (0x07, R(*x)),
-            srl(x) => (0x02, R(*x)),
-            srlv(x) => (0x06, R(*x)),
+            add(x) => (0x20, R(x)),
+            addu(x) => (0x21, R(x)),
+            and(x) => (0x24, R(x)),
+            nor(x) => (0x27, R(x)),
+            or(x) => (0x25, R(x)),
+            slt(x) => (0x2a, R(x)),
+            sltu(x) => (0x2b, R(x)),
+            sub(x) => (0x22, R(x)),
+            subu(x) => (0x23, R(x)),
+            xor(x) => (0x26, R(x)),
+            sll(x) => (0x00, R(x)),
+            sllv(x) => (0x04, R(x)),
+            sra(x) => (0x03, R(x)),
+            srav(x) => (0x07, R(x)),
+            srl(x) => (0x02, R(x)),
+            srlv(x) => (0x06, R(x)),
 
-            addi(x) => (0x08, I(*x)),
-            addiu(x) => (0x09, I(*x)),
-            andi(x) => (0x0c, I(*x)),
-            lui(x) => (0x0f, I(*x)),
-            ori(x) => (0x0d, I(*x)),
-            slti(x) => (0x0a, I(*x)),
-            sltiu(x) => (0x0b, I(*x)),
-            xori(x) => (0x0e, I(*x)),
+            addi(x) => (0x08, I(x)),
+            addiu(x) => (0x09, I(x)),
+            andi(x) => (0x0c, I(x)),
+            lui(x) => (0x0f, I(x)),
+            ori(x) => (0x0d, I(x)),
+            slti(x) => (0x0a, I(x)),
+            sltiu(x) => (0x0b, I(x)),
+            xori(x) => (0x0e, I(x)),
 
-            beq(x) => (0x04, I(*x)),
+            beq(x) => (0x04, I(x)),
             bgez(x) => (
                 0x01,
                 I(TypeI {
                     rt: RegisterName::new(0b00001),
-                    ..*x
+                    ..x
                 }),
             ),
             bgezal(x) => (
                 0x01,
                 I(TypeI {
                     rt: RegisterName::new(0b10001),
-                    ..*x
+                    ..x
                 }),
             ),
             bgtz(x) => (
                 0x07,
                 I(TypeI {
                     rt: RegisterName::new(0),
-                    ..*x
+                    ..x
                 }),
             ),
             blez(x) => (
                 0x06,
                 I(TypeI {
                     rt: RegisterName::new(0),
-                    ..*x
+                    ..x
                 }),
             ),
             bltz(x) => (
                 0x01,
                 I(TypeI {
                     rt: RegisterName::new(0b00000),
-                    ..*x
+                    ..x
                 }),
             ),
             bltzal(x) => (
                 0x01,
                 I(TypeI {
                     rt: RegisterName::new(0b10000),
-                    ..*x
+                    ..x
                 }),
             ),
-            bne(x) => (0x05, I(*x)),
+            bne(x) => (0x05, I(x)),
 
-            lb(x) => (0x20, I(*x)),
-            lbu(x) => (0x24, I(*x)),
-            lh(x) => (0x21, I(*x)),
-            lhu(x) => (0x25, I(*x)),
-            lw(x) => (0x23, I(*x)),
-            sb(x) => (0x28, I(*x)),
-            sh(x) => (0x29, I(*x)),
-            sw(x) => (0x2b, I(*x)),
+            lb(x) => (0x20, I(x)),
+            lbu(x) => (0x24, I(x)),
+            lh(x) => (0x21, I(x)),
+            lhu(x) => (0x25, I(x)),
+            lw(x) => (0x23, I(x)),
+            sb(x) => (0x28, I(x)),
+            sh(x) => (0x29, I(x)),
+            sw(x) => (0x2b, I(x)),
 
-            j(x) => (2, J(*x)),
-            jal(x) => (3, J(*x)),
-            jalr(x) => (0x09, R(*x)),
-            jr(x) => (0x08, R(*x)),
-            syscall(x) => (0x0c, R(*x)),
-            invalid(x) => return *x,
+            j(x) => (2, J(x)),
+            jal(x) => (3, J(x)),
+            jalr(x) => (0x09, R(x)),
+            jr(x) => (0x08, R(x)),
+            syscall(x) => (0x0c, R(x)),
+            invalid(x) => return x,
         };
 
         match ty {
@@ -345,6 +404,59 @@ impl Instruction {
             2 => j(tj),
             3 => jal(tj),
             _ => invalid(ins),
+        }
+    }
+
+    pub fn unused_field_zeroed(self) -> Self {
+        use Instruction::*;
+
+        match self {
+            add(x) => add(x.shamt_zeroed()),
+            addu(x) => addu(x.shamt_zeroed()),
+            and(x) => and(x.shamt_zeroed()),
+            nor(x) => nor(x.shamt_zeroed()),
+            or(x) => or(x.shamt_zeroed()),
+            slt(x) => slt(x.shamt_zeroed()),
+            sltu(x) => sltu(x.shamt_zeroed()),
+            sub(x) => sub(x.shamt_zeroed()),
+            subu(x) => subu(x.shamt_zeroed()),
+            xor(x) => xor(x.shamt_zeroed()),
+            sll(x) => sll(x.rs_zeroed()),
+            sllv(x) => sllv(x.shamt_zeroed()),
+            sra(x) => sra(x.rs_zeroed()),
+            srav(x) => srav(x.shamt_zeroed()),
+            srl(x) => srl(x.rs_zeroed()),
+            srlv(x) => srlv(x.shamt_zeroed()),
+            addi(_) => self,
+            addiu(_) => self,
+            andi(_) => self,
+            lui(x) => lui(x.rs_zeroed()),
+            ori(_) => self,
+            slti(_) => self,
+            sltiu(_) => self,
+            xori(_) => self,
+            beq(_) => self,
+            bgez(_) => self,
+            bgezal(_) => self,
+            bgtz(_) => self,
+            blez(_) => self,
+            bltz(_) => self,
+            bltzal(_) => self,
+            bne(_) => self,
+            lb(_) => self,
+            lbu(_) => self,
+            lh(_) => self,
+            lhu(_) => self,
+            lw(_) => self,
+            sb(_) => self,
+            sh(_) => self,
+            sw(_) => self,
+            j(_) => self,
+            jal(_) => self,
+            jalr(x) => jalr(x.rt_zeroed().shamt_zeroed()),
+            jr(x) => jr(x.rt_zeroed().rd_zeroed().shamt_zeroed()),
+            syscall(_) => syscall(Default::default()),
+            invalid(_) => self,
         }
     }
 }

@@ -20,8 +20,31 @@ fn format_type_shift(mnemonic: &str, x: TypeR) -> String {
     )
 }
 
+fn format_type_shift_reg(mnemonic: &str, x: TypeR) -> String {
+    // Shift instructions use $d, $t, $s order,
+    // where normal ones use $d, $s, $t order.
+
+    format!(
+        "{} ${}, ${}, ${}",
+        mnemonic,
+        x.rd.name(),
+        x.rt.name(),
+        x.rs.name()
+    )
+}
+
 fn format_type_i(mnemonic: &str, x: TypeI) -> String {
     format!("{} ${}, ${}, {}", mnemonic, x.rt.name(), x.rs.name(), x.imm)
+}
+
+fn format_type_i_signed(mnemonic: &str, x: TypeI) -> String {
+    format!(
+        "{} ${}, ${}, {}",
+        mnemonic,
+        x.rt.name(),
+        x.rs.name(),
+        x.imm as i16
+    )
 }
 
 fn format_type_branch_2arg(mnemonic: &str, x: TypeI) -> String {
@@ -30,12 +53,12 @@ fn format_type_branch_2arg(mnemonic: &str, x: TypeI) -> String {
         mnemonic,
         x.rs.name(),
         x.rt.name(),
-        x.imm as u32 * 4
+        x.imm as i16 as i32 * 4
     )
 }
 
 fn format_type_branch_1arg(mnemonic: &str, x: TypeI) -> String {
-    format!("{} ${}, {}", mnemonic, x.rs.name(), x.imm as u32 * 4)
+    format!("{} ${}, {}", mnemonic, x.rs.name(), x.imm as i16 as i32 * 4)
 }
 
 fn format_type_memory(mnemonic: &str, x: TypeI) -> String {
@@ -79,17 +102,17 @@ pub fn disassemble(ins: u32) -> String {
         Instruction::subu(x) => format_type_r("subu", x),
         Instruction::xor(x) => format_type_r("xor", x),
         Instruction::sll(x) => format_type_shift("sll", x),
-        Instruction::sllv(x) => format_type_r("sllv", x),
+        Instruction::sllv(x) => format_type_shift_reg("sllv", x),
         Instruction::sra(x) => format_type_shift("sra", x),
-        Instruction::srav(x) => format_type_r("srav", x),
+        Instruction::srav(x) => format_type_shift_reg("srav", x),
         Instruction::srl(x) => format_type_shift("srl", x),
-        Instruction::srlv(x) => format_type_r("srlv", x),
-        Instruction::addi(x) => format_type_i("addi", x),
-        Instruction::addiu(x) => format_type_i("addiu", x),
+        Instruction::srlv(x) => format_type_shift_reg("srlv", x),
+        Instruction::addi(x) => format_type_i_signed("addi", x),
+        Instruction::addiu(x) => format_type_i_signed("addiu", x),
         Instruction::andi(x) => format_type_i("andi", x),
         Instruction::lui(x) => format!("lui ${}, {}", x.rt.name(), x.imm),
         Instruction::ori(x) => format_type_i("ori", x),
-        Instruction::slti(x) => format_type_i("slti", x),
+        Instruction::slti(x) => format_type_i_signed("slti", x),
         Instruction::sltiu(x) => format_type_i("sltiu", x),
         Instruction::xori(x) => format_type_i("xori", x),
         Instruction::beq(x) => format_type_branch_2arg("beq", x),
@@ -114,5 +137,52 @@ pub fn disassemble(ins: u32) -> String {
         Instruction::jr(x) => format_type_jump_reg("jr", x),
         Instruction::syscall(_) => "syscall".into(),
         Instruction::invalid(_) => format!("<invalid instruction 0x{:08x}>", ins),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::assembler::assemble;
+    use crate::memory::EndianMode;
+    use byteorder::ReadBytesExt;
+    use rayon::prelude::*;
+    use std::io::Cursor;
+
+    #[test]
+    #[ignore] // This really takes long time
+    fn backtoback() {
+        let native = EndianMode::native();
+
+        let total_count = (0..=0xffffffff)
+            .into_par_iter()
+            .map(|ins: u32| {
+                let decoded = Instruction::decode(ins);
+                if decoded.as_invalid().is_some() || decoded.unused_field_zeroed().encode() != ins {
+                    return;
+                }
+
+                let asm = disassemble(ins);
+                let explained = format!("{:08x} -> `{}`", ins, asm);
+
+                let code = format!(".text\n{}", asm);
+                let segs = assemble(native, &code).expect(&explained);
+                assert_eq!(segs.len(), 1);
+                assert_eq!(segs[0].base_addr, 0x00400024);
+
+                let mut cursor = Cursor::new(&segs[0].data);
+                let assembled_ins = cursor
+                    .read_u32::<byteorder::NativeEndian>()
+                    .expect(&explained);
+
+                assert_eq!(
+                    ins, assembled_ins,
+                    "{:08x} -> `{}` -> {:08x}",
+                    ins, asm, assembled_ins
+                );
+            })
+            .count();
+
+        assert_eq!(total_count, 4294967296);
     }
 }

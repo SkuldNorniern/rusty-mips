@@ -79,11 +79,10 @@ impl LineContext<'_> {
         let target = if let Token::Number { num, .. } = label {
             if relative {
                 // parse as offset
-                next_pc.wrapping_add(
-                    (*num)
-                        .try_into()
-                        .map_err(|_| ImmediateTooLargeSnafu { imm: *num }.build())?,
-                )
+                let offset: i32 = (*num)
+                    .try_into()
+                    .map_err(|_| ImmediateTooLargeSnafu { imm: *num }.build())?;
+                next_pc.wrapping_add(offset as u32)
             } else {
                 // parse as target address
                 (*num)
@@ -117,11 +116,9 @@ impl LineContext<'_> {
 
     fn resolve_branch(&self, label: &Token) -> Result<i16, AssemblerError> {
         let target = self.resolve_label(label, true)?;
-        let offset = target.wrapping_sub(self.pc.wrapping_add(4)) as i32;
-
-        (offset / 4)
-            .try_into()
-            .map_err(|_| ImmediateTooLargeSnafu { imm: offset }.build())
+        let encoded = target.wrapping_sub(self.pc.wrapping_add(4)) as i32 / 4;
+        expect_extendable(encoded as _, true)?;
+        Ok(encoded as i16)
     }
 
     fn resolve_jump(&self, label: &Token) -> Result<u32, AssemblerError> {
@@ -777,6 +774,21 @@ mod test {
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x121cffff);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x101c0000);
         assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x114bfffd);
+    }
+
+    #[test]
+    fn assemble_large_branch() {
+        // Contains no branch delay slot!
+        let code = ".text\nbeq $0, $0, -131072\nbeq $0, $0, 131068";
+        let segs = assemble(*NE, code).unwrap();
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].base_addr, 0x00400024);
+        assert_eq!(segs[0].data.len(), 8);
+        assert!(segs[0].labels().is_empty());
+
+        let mut data = Cursor::new(&segs[0].data);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10008000);
+        assert_eq!(data.read_u32::<NativeEndian>().unwrap(), 0x10007fff);
     }
 
     #[test]
