@@ -389,6 +389,60 @@ const SvgUntitled = (props, ref) => (
         }}
       />
     </g>
+    <g transform="matrix(1.41712,0,0,1.00526,1703.52,1581.74)">
+      <path
+        d="M230.536,580.707C230.536,561.943 219.73,546.709 206.42,546.709C193.109,546.709 182.303,561.943 182.303,580.707L182.303,685.915C182.303,704.678 193.109,719.912 206.42,719.912C219.73,719.912 230.536,704.678 230.536,685.915L230.536,580.707Z"
+        style={{
+          fill: 'rgb(235,235,235)'
+        }}
+      />
+      <clipPath id="_clip7">
+        <path d="M230.536,580.707C230.536,561.943 219.73,546.709 206.42,546.709C193.109,546.709 182.303,561.943 182.303,580.707L182.303,685.915C182.303,704.678 193.109,719.912 206.42,719.912C219.73,719.912 230.536,704.678 230.536,685.915L230.536,580.707Z" />
+      </clipPath>
+      <g clipPath="url(#_clip7)">
+        <g transform="matrix(0.676536,0,0,0.966368,-6.06579,-26.3456)">
+          <text
+            x="298.541px"
+            y="658.723px"
+            style={{
+              fontFamily: "'ArialMT', 'Arial', sans-serif",
+              fontSize: '37.5px'
+            }}
+          >
+            {'M'}
+          </text>
+          <text
+            x="298.541px"
+            y="697.449px"
+            style={{
+              fontFamily: "'ArialMT', 'Arial', sans-serif",
+              fontSize: '37.5px'
+            }}
+          >
+            {'U'}
+          </text>
+          <g transform="matrix(37.5,0,0,37.5,323.554,736.176)" />
+          <text
+            x="298.541px"
+            y="736.176px"
+            style={{
+              fontFamily: "'ArialMT', 'Arial', sans-serif",
+              fontSize: '37.5px'
+            }}
+          >
+            {'X'}
+          </text>
+        </g>
+      </g>
+      <path
+        d="M230.536,580.707C230.536,561.943 219.73,546.709 206.42,546.709C193.109,546.709 182.303,561.943 182.303,580.707L182.303,685.915C182.303,704.678 193.109,719.912 206.42,719.912C219.73,719.912 230.536,704.678 230.536,685.915L230.536,580.707Z"
+        style={{
+          fill: 'none',
+          stroke: 'black',
+          strokeWidth: '3.39px'
+        }}
+      />
+    </g>
     <g transform="matrix(1.41712,0,0,1.09581,2550.51,1563.21)">
       <path
         d="M230.536,577.897C230.536,560.684 219.73,546.709 206.42,546.709C193.109,546.709 182.303,560.684 182.303,577.897L182.303,688.724C182.303,705.937 193.109,719.912 206.42,719.912C219.73,719.912 230.536,705.937 230.536,688.724L230.536,577.897Z"
@@ -396,10 +450,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip7">
+      <clipPath id="_clip8">
         <path d="M230.536,577.897C230.536,560.684 219.73,546.709 206.42,546.709C193.109,546.709 182.303,560.684 182.303,577.897L182.303,688.724C182.303,705.937 193.109,719.912 206.42,719.912C219.73,719.912 230.536,705.937 230.536,688.724L230.536,577.897Z" />
       </clipPath>
-      <g clipPath="url(#_clip7)">
+      <g clipPath="url(#_clip8)">
         <g transform="matrix(0.676536,0,0,0.966368,-6.06579,-26.3456)">
           <text
             x="298.541px"
@@ -450,10 +504,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip8">
+      <clipPath id="_clip9">
         <path d="M230.536,577.897C230.536,560.684 219.73,546.709 206.42,546.709C193.109,546.709 182.303,560.684 182.303,577.897L182.303,688.724C182.303,705.937 193.109,719.912 206.42,719.912C219.73,719.912 230.536,705.937 230.536,688.724L230.536,577.897Z" />
       </clipPath>
-      <g clipPath="url(#_clip8)">
+      <g clipPath="url(#_clip9)">
         <g transform="matrix(0.676536,0,0,0.966368,-6.06579,-27.4651)">
           <text
             x="298.541px"
@@ -504,10 +558,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip9">
+      <clipPath id="_clip10">
         <path d="M230.536,577.897C230.536,560.684 219.73,546.709 206.42,546.709C193.109,546.709 182.303,560.684 182.303,577.897L182.303,688.724C182.303,705.937 193.109,719.912 206.42,719.912C219.73,719.912 230.536,705.937 230.536,688.724L230.536,577.897Z" />
       </clipPath>
-      <g clipPath="url(#_clip9)">
+      <g clipPath="url(#_clip10)">
         <g transform="matrix(0.676536,0,0,0.966368,-6.06579,-27.4651)">
           <text
             x="298.541px"
@@ -1100,10 +1154,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip10">
+      <clipPath id="_clip11">
         <circle cx={1789.24} cy={2237.21} r={103.5} />
       </clipPath>
-      <g clipPath="url(#_clip10)">
+      <g clipPath="url(#_clip11)">
         <g transform="matrix(1.29015,0,0,1.42502,1341.92,1286.01)">
           <text
             x="311.047px"
@@ -1148,10 +1202,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(181,191,255)'
         }}
       />
-      <clipPath id="_clip11">
+      <clipPath id="_clip12">
         <circle cx={1789.24} cy={2237.21} r={103.5} />
       </clipPath>
-      <g clipPath="url(#_clip11)">
+      <g clipPath="url(#_clip12)">
         <g transform="matrix(0.909718,0,0,1.00482,1471.99,1569.06)">
           <text
             x="288.132px"
@@ -1196,10 +1250,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip12">
+      <clipPath id="_clip13">
         <circle cx={1789.24} cy={2237.21} r={103.5} />
       </clipPath>
-      <g clipPath="url(#_clip12)">
+      <g clipPath="url(#_clip13)">
         <g transform="matrix(0.909718,0,0,1.00482,1471.99,1569.06)">
           <text
             x="312.1px"
@@ -1232,54 +1286,6 @@ const SvgUntitled = (props, ref) => (
           fill: 'none',
           stroke: 'black',
           strokeWidth: '5.83px'
-        }}
-      />
-    </g>
-    <g transform="matrix(0.430037,0,0,0.430037,768.333,653.432)">
-      <circle
-        cx={1789.24}
-        cy={2237.21}
-        r={103.5}
-        style={{
-          fill: 'rgb(235,235,235)'
-        }}
-      />
-      <clipPath id="_clip13">
-        <circle cx={1789.24} cy={2237.21} r={103.5} />
-      </clipPath>
-      <g clipPath="url(#_clip13)">
-        <g transform="matrix(1.51249,0,0,1.6706,1262.09,1130.92)">
-          <text
-            x="311.057px"
-            y="658.723px"
-            style={{
-              fontFamily: "'ArialMT', 'Arial', sans-serif",
-              fontSize: '37.5px'
-            }}
-          >
-            {'Shift'}
-          </text>
-          <g transform="matrix(37.5,0,0,37.5,395.487,697.449)" />
-          <text
-            x="301.663px"
-            y="697.449px"
-            style={{
-              fontFamily: "'ArialMT', 'Arial', sans-serif",
-              fontSize: '37.5px'
-            }}
-          >
-            {'Left 2'}
-          </text>
-        </g>
-      </g>
-      <circle
-        cx={1789.24}
-        cy={2237.21}
-        r={103.5}
-        style={{
-          fill: 'none',
-          stroke: 'black',
-          strokeWidth: '9.69px'
         }}
       />
     </g>
@@ -1331,7 +1337,7 @@ const SvgUntitled = (props, ref) => (
         }}
       />
     </g>
-    <g transform="matrix(0.430037,0,0,0.430037,682.676,720.733)">
+    <g transform="matrix(0.430037,0,0,0.430037,768.333,653.432)">
       <circle
         cx={1789.24}
         cy={2237.21}
@@ -1379,6 +1385,54 @@ const SvgUntitled = (props, ref) => (
         }}
       />
     </g>
+    <g transform="matrix(0.430037,0,0,0.430037,682.676,720.733)">
+      <circle
+        cx={1789.24}
+        cy={2237.21}
+        r={103.5}
+        style={{
+          fill: 'rgb(235,235,235)'
+        }}
+      />
+      <clipPath id="_clip16">
+        <circle cx={1789.24} cy={2237.21} r={103.5} />
+      </clipPath>
+      <g clipPath="url(#_clip16)">
+        <g transform="matrix(1.51249,0,0,1.6706,1262.09,1130.92)">
+          <text
+            x="311.057px"
+            y="658.723px"
+            style={{
+              fontFamily: "'ArialMT', 'Arial', sans-serif",
+              fontSize: '37.5px'
+            }}
+          >
+            {'Shift'}
+          </text>
+          <g transform="matrix(37.5,0,0,37.5,395.487,697.449)" />
+          <text
+            x="301.663px"
+            y="697.449px"
+            style={{
+              fontFamily: "'ArialMT', 'Arial', sans-serif",
+              fontSize: '37.5px'
+            }}
+          >
+            {'Left 2'}
+          </text>
+        </g>
+      </g>
+      <circle
+        cx={1789.24}
+        cy={2237.21}
+        r={103.5}
+        style={{
+          fill: 'none',
+          stroke: 'black',
+          strokeWidth: '9.69px'
+        }}
+      />
+    </g>
     <g transform="matrix(0.714976,0,0,0.714976,1519.39,1179.81)">
       <circle
         cx={1789.24}
@@ -1388,10 +1442,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(254,255,169)'
         }}
       />
-      <clipPath id="_clip16">
+      <clipPath id="_clip17">
         <circle cx={1789.24} cy={2237.21} r={103.5} />
       </clipPath>
-      <g clipPath="url(#_clip16)">
+      <g clipPath="url(#_clip17)">
         <g transform="matrix(0.909718,0,0,1.00482,1471.99,1569.06)">
           <text
             x="254.788px"
@@ -1436,10 +1490,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(255,147,147)'
         }}
       />
-      <clipPath id="_clip17">
+      <clipPath id="_clip18">
         <circle cx={1789.24} cy={2237.21} r={103.5} />
       </clipPath>
-      <g clipPath="url(#_clip17)">
+      <g clipPath="url(#_clip18)">
         <g transform="matrix(0.909718,0,0,1.00482,1471.99,1569.06)">
           <text
             x="288.132px"
@@ -1484,10 +1538,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip18">
+      <clipPath id="_clip19">
         <path d="M391.139,410.04L391.139,332.489L426.247,292.215L391.139,250.529L391.139,169.559L446.645,245.732L446.645,338.268L391.139,410.04Z" />
       </clipPath>
-      <g clipPath="url(#_clip18)">
+      <g clipPath="url(#_clip19)">
         <g transform="matrix(0.69813,0,0,1.43869,135.866,-81.1887)">
           <g transform="matrix(24.1667,0,0,24.1667,440.584,267.854)" />
           <text
@@ -1518,10 +1572,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip19">
+      <clipPath id="_clip20">
         <path d="M391.139,410.04L391.139,332.489L426.247,292.215L391.139,250.529L391.139,169.559L446.645,225.488L446.645,358.512L391.139,410.04Z" />
       </clipPath>
-      <g clipPath="url(#_clip19)">
+      <g clipPath="url(#_clip20)">
         <g transform="matrix(0.277053,0,0,0.755411,312.326,-275.973)">
           <g transform="matrix(37.5,0,0,37.5,323.554,658.723)" />
           <text
@@ -1573,7 +1627,6 @@ const SvgUntitled = (props, ref) => (
     </g>
     <g
       id="_-4-Adder"
-
       transform="matrix(1,0,0,1,-122.002,-30.5167)"
     >
       <g transform="matrix(1.41712,0,0,1.41712,117.722,1095.95)">
@@ -1596,10 +1649,10 @@ const SvgUntitled = (props, ref) => (
             fill: 'rgb(235,235,235)'
           }}
         />
-        <clipPath id="_clip20">
+        <clipPath id="_clip21">
           <path d="M391.139,410.04L391.139,332.489L426.247,292.215L391.139,250.529L391.139,169.559L446.645,245.732L446.645,338.268L391.139,410.04Z" />
         </clipPath>
-        <g clipPath="url(#_clip20)">
+        <g clipPath="url(#_clip21)">
           <g transform="matrix(0.69813,0,0,1.43869,135.866,-81.1887)">
             <g transform="matrix(24.1667,0,0,24.1667,440.584,267.854)" />
             <text
@@ -1626,7 +1679,6 @@ const SvgUntitled = (props, ref) => (
     </g>
     <g
       id="IF-ID-Pipe"
-
       transform="matrix(1,0,0,1,-124.099,191)"
     >
       <g transform="matrix(3.16206,0,0,10.2874,722.216,-4753.81)">
@@ -1737,7 +1789,6 @@ const SvgUntitled = (props, ref) => (
     </g>
     <g
       id="ID-EX-Pipe"
-
       transform="matrix(1,0,0,1,26.4976,191)"
     >
       <g transform="matrix(3.16206,0,0,13.709,1628.87,-7216.57)">
@@ -2518,7 +2569,6 @@ const SvgUntitled = (props, ref) => (
     </g>
     <g
       id="EX-MEM-Pipe"
-
       transform="matrix(1,0,0,1,469.159,191)"
     >
       <g transform="matrix(3.16206,0,0,13.709,2720.71,-7216.57)">
@@ -2841,10 +2891,10 @@ const SvgUntitled = (props, ref) => (
           fill: 'rgb(235,235,235)'
         }}
       />
-      <clipPath id="_clip21">
+      <clipPath id="_clip22">
         <circle cx={1789.24} cy={2237.21} r={103.5} />
       </clipPath>
-      <g clipPath="url(#_clip21)">
+      <g clipPath="url(#_clip22)">
         <g transform="matrix(2.49272,0,0,2.7533,919.838,460.49)">
           <g transform="matrix(37.5,0,0,37.5,359.525,658.723)" />
           <text
@@ -2872,7 +2922,6 @@ const SvgUntitled = (props, ref) => (
     </g>
     <g
       id="MEM-WB-Pipe"
-
       transform="matrix(1,0,0,1,537.901,191)"
     >
       <g transform="matrix(3.16206,0,0,13.709,3782.79,-7216.57)">
@@ -3050,6 +3099,16 @@ const SvgUntitled = (props, ref) => (
           >
             {'MemtoReg'}
           </text>
+        </g>
+        <g transform="matrix(0.730969,0,0,1.22033,-1857.34,655.326)">
+          <path
+            d="M4382.4,419.532L4488.09,419.532L4382.4,419.532Z"
+            style={{
+              fill: 'rgb(0,18,135)',
+              stroke: 'black',
+              strokeWidth: '1.67px'
+            }}
+          />
         </g>
         <rect
           x={1336.61}
@@ -3307,9 +3366,19 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
-      <g transform="matrix(0.659345,0,0,5.00868,1707.8,-7115.34)">
+      <g transform="matrix(0.4282,0,0,5.00868,1820.37,-7115.34)">
         <path
-          d="M411.996,1718.79L562.073,1718.79L544.649,1716.5L562.073,1718.79L544.649,1721.09L562.073,1718.79L411.996,1718.79Z"
+          d="M411.996,1718.79L562.073,1718.79L535.243,1716.5L562.073,1718.79L535.243,1721.09L562.073,1718.79L411.996,1718.79Z"
+          style={{
+            fill: 'rgb(255,181,181)',
+            stroke: 'black',
+            strokeWidth: '1.17px'
+          }}
+        />
+      </g>
+      <g transform="matrix(0.4282,0,0,5.00868,1820.37,-6672)">
+        <path
+          d="M411.996,1718.79L562.073,1718.79L535.243,1716.5L562.073,1718.79L535.243,1721.09L562.073,1718.79L411.996,1718.79Z"
           style={{
             fill: 'rgb(255,181,181)',
             stroke: 'black',
@@ -3397,13 +3466,13 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
-      <g transform="matrix(2.29486,0,0,5.00868,1055.2,-6672.74)">
+      <g transform="matrix(1.25646,0,0,5.00868,1638.85,-6672.74)">
         <path
-          d="M411.996,1718.79L562.073,1718.79L557.067,1716.5L562.073,1718.79L557.067,1721.09L562.073,1718.79L411.996,1718.79Z"
+          d="M411.996,1718.79L562.073,1718.79L552.93,1716.5L562.073,1718.79L552.93,1721.09L562.073,1718.79L411.996,1718.79Z"
           style={{
             fill: 'rgb(255,181,181)',
             stroke: 'black',
-            strokeWidth: '1.07px'
+            strokeWidth: '1.14px'
           }}
         />
       </g>
@@ -4157,8 +4226,6 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
-      <text x="5320px" y="1590px" style={{ fontFamily: 'ArialMT, Arial, sans-serif', fontSize: '29.167px' }}>0</text>
-      <text x="5320px" y="1480px" style={{ fontFamily: 'ArialMT, Arial, sans-serif', fontSize: '29.167px' }}>1</text>
       <g transform="matrix(3.88712e-17,-0.634815,5.00868,3.06693e-16,-3255.96,1920.93)">
         <path
           d="M411.996,1718.79L562.073,1718.79L411.996,1718.79Z"
@@ -4720,6 +4787,20 @@ const SvgUntitled = (props, ref) => (
         </text>
       </g>
       <g transform="matrix(0.636749,0,0,0.703312,2591.47,1352)">
+        <g transform="matrix(37.5,0,0,37.5,394.397,658.723)" />
+        <text
+          x="298.541px"
+          y="658.723px"
+          style={{
+            fontFamily: "'ArialMT', 'Arial', sans-serif",
+            fontSize: '37.5px',
+            fill: 'rgb(120,110,7)'
+          }}
+        >
+          {'FwdB'}
+        </text>
+      </g>
+      <g transform="matrix(0.636749,0,0,0.703312,1898.63,1660.15)">
         <g transform="matrix(37.5,0,0,37.5,394.397,658.723)" />
         <text
           x="298.541px"
@@ -5410,26 +5491,6 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
-      <g transform="matrix(1.79005e-17,-0.292338,5.00868,3.06693e-16,-5813.86,2701.83)">
-        <path
-          d="M411.996,1718.79L562.073,1718.79L411.996,1718.79Z"
-          style={{
-            fill: 'rgb(255,181,181)',
-            stroke: 'rgb(120,110,7)',
-            strokeWidth: '1.17px'
-          }}
-        />
-      </g>
-      <g transform="matrix(0.435551,-2.46519e-32,-7.34573e-32,5.00868,2615.78,-6071.35)">
-        <path
-          d="M411.996,1718.79L562.073,1718.79L411.996,1718.79Z"
-          style={{
-            fill: 'rgb(255,181,181)',
-            stroke: 'rgb(120,110,7)',
-            strokeWidth: '1.17px'
-          }}
-        />
-      </g>
       <g transform="matrix(3.91711e-17,-0.639713,5.00868,3.06693e-16,-5648.28,2940.19)">
         <path
           d="M411.996,1718.79L562.073,1718.79L544.114,1716.5L562.073,1718.79L544.114,1721.09L562.073,1718.79L411.996,1718.79Z"
@@ -5870,13 +5931,23 @@ const SvgUntitled = (props, ref) => (
           }}
         />
       </g>
-      <g transform="matrix(3.99072e-16,-6.51734,5.00868,3.06693e-16,-6489.05,5266.87)">
+      <g transform="matrix(2.58943e-17,-0.422887,5.00868,3.06693e-16,-6489.05,1827.09)">
         <path
-          d="M411.996,1718.79L562.073,1718.79L560.311,1716.5L562.073,1718.79L560.311,1721.09L562.073,1718.79L411.996,1718.79Z"
+          d="M411.996,1718.79L562.073,1718.79L534.906,1716.5L562.073,1718.79L534.906,1721.09L562.073,1718.79L411.996,1718.79Z"
           style={{
             fill: 'rgb(255,181,181)',
             stroke: 'rgb(120,110,7)',
-            strokeWidth: '0.72px'
+            strokeWidth: '1.17px'
+          }}
+        />
+      </g>
+      <g transform="matrix(2.58943e-17,-0.422887,5.00868,3.06693e-16,-6489.05,2268.44)">
+        <path
+          d="M411.996,1718.79L562.073,1718.79L534.906,1716.5L562.073,1718.79L534.906,1721.09L562.073,1718.79L411.996,1718.79Z"
+          style={{
+            fill: 'rgb(255,181,181)',
+            stroke: 'rgb(120,110,7)',
+            strokeWidth: '1.17px'
           }}
         />
       </g>
@@ -5887,16 +5958,6 @@ const SvgUntitled = (props, ref) => (
             fill: 'rgb(255,181,181)',
             stroke: 'rgb(120,110,7)',
             strokeWidth: '1.15px'
-          }}
-        />
-      </g>
-      <g transform="matrix(4.49767,-2.15704e-32,-6.53374e-31,5.00868,267.047,-6026.98)">
-        <path
-          d="M411.996,1718.79L562.073,1718.79L411.996,1718.79Z"
-          style={{
-            fill: 'rgb(255,181,181)',
-            stroke: 'rgb(120,110,7)',
-            strokeWidth: '0.88px'
           }}
         />
       </g>
@@ -6223,6 +6284,20 @@ const SvgUntitled = (props, ref) => (
           strokeWidth: '4.17px'
         }}
       />
+    </g>
+    <g transform="matrix(0.636749,0,0,0.703312,1775.46,1500.7)">
+      <g transform="matrix(37.5,0,0,37.5,394.397,658.723)" />
+      <text
+        x="298.541px"
+        y="658.723px"
+        style={{
+          fontFamily: "'ArialMT', 'Arial', sans-serif",
+          fontSize: '37.5px',
+          fill: 'rgb(120,110,7)'
+        }}
+      >
+        {'FwdA'}
+      </text>
     </g>
   </svg>
 );
