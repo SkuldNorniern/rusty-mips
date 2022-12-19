@@ -11,6 +11,12 @@ const API_VERSION: u32 = 1;
 
 thread_local!(static READ_MEM_BUFFER: RefCell<Vec<u8>> = RefCell::new(vec![0; 4096]));
 
+#[neon::main]
+fn main(mut cx: ModuleContext) -> NeonResult<()> {
+    register_functions(&mut cx)?;
+    Ok(())
+}
+
 fn init(mut cx: FunctionContext) -> JsResult<JsNumber> {
     let callback = cx.argument::<JsFunction>(0)?.root(&mut cx);
 
